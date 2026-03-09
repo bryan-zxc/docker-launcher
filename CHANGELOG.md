@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.2] - 2026-03-10
+
+### Fixed
+
+- Image select dropdown no longer overflows its box with long descriptions
+
 ## [0.1.1] - 2026-03-10
 
 ### Fixed

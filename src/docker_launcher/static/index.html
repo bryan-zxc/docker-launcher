@@ -1811,8 +1811,7 @@ html.light .confirm-dialog {
     } else {
       for (var i = 0; i < images.length; i++) {
         var img = images[i];
-        var desc = img.description ? ' \u2014 ' + img.description : '';
-        html += '<option value="' + esc(img.id) + '">' + esc(img.name) + esc(desc) + '</option>';
+        html += '<option value="' + esc(img.id) + '">' + esc(img.name) + '</option>';
       }
     }
     $createImage.innerHTML = html;
