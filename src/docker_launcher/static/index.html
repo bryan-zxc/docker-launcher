@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker Launcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-width: 220px;
+  --drawer-width: 480px;
+}
+
+html.dark {
+  --navy: #0B1120;
+  --slate: #111827;
+  --slate-light: #1E293B;
+  --slate-lighter: #334155;
+  --blue: #00AAFF;
+  --cyan: #00E5FF;
+  --red: #FF4D6A;
+  --green: #34D399;
+  --yellow: #FBBF24;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-dim: #64748B;
+  --glass-bg: rgba(17, 24, 39, 0.7);
+  --glass-border: rgba(0, 170, 255, 0.1);
+  --glass-border-hover: rgba(0, 170, 255, 0.25);
+  --sidebar-bg: rgba(11, 17, 32, 0.92);
+  --sidebar-border: rgba(0, 170, 255, 0.1);
+  --sidebar-text: #94A3B8;
+  --sidebar-text-hover: #F1F5F9;
+  --sidebar-active-bg: rgba(0, 229, 255, 0.08);
+  --sidebar-active-text: var(--cyan);
+  --input-bg: #111827;
+  --dot-color: rgba(0, 170, 255, 0.04);
+}
+
+html.light {
+  --navy: #F0F4F8;
+  --slate: #FFFFFF;
+  --slate-light: #E8EDF2;
+  --slate-lighter: #CBD5E1;
+  --blue: #0088DD;
+  --cyan: #0099CC;
+  --red: #E5384B;
+  --green: #16A368;
+  --yellow: #D9970A;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-dim: #94A3B8;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(0, 136, 221, 0.12);
+  --glass-border-hover: rgba(0, 136, 221, 0.28);
+  --sidebar-bg: #FFFFFF;
+  --sidebar-border: #E2E8F0;
+  --sidebar-text: #475569;
+  --sidebar-text-hover: #0F172A;
+  --sidebar-active-bg: rgba(0, 136, 221, 0.08);
+  --sidebar-active-text: var(--blue);
+  --input-bg: #F0F4F8;
+  --dot-color: rgba(0, 136, 221, 0.04);
+}
+
+html { font-size: 15px; }
+
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--navy);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+  background-size: 28px 28px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--slate-lighter); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ===== Layout ===== */
+.app { display: flex; min-height: 100vh; }
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.sidebar-brand {
+  padding: 24px 20px 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.sidebar-brand .brand-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-brand .brand-icon .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--navy);
+}
+
+.sidebar-brand h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  border: 1px solid transparent;
+}
+
+.nav-link:hover {
+  color: var(--sidebar-text-hover);
+  background: var(--sidebar-active-bg);
+}
+
+.nav-link.active {
+  color: var(--sidebar-active-text);
+  background: var(--sidebar-active-bg);
+  border-color: transparent;
+}
+
+.nav-link .material-symbols-outlined { font-size: 20px; }
+
+.sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--sidebar-border);
+}
+
+.sidebar-version {
+  padding: 4px 12px 8px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--sidebar-text);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.theme-toggle:hover { color: var(--sidebar-text-hover); background: var(--sidebar-active-bg); }
+.theme-toggle .material-symbols-outlined { font-size: 18px; }
+
+/* ===== Main content ===== */
+.main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ===== Docker Status Banner ===== */
+.docker-banner {
+  background: rgba(251, 191, 36, 0.1);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+  padding: 10px 24px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--yellow);
+  transition: all 0.3s ease;
+}
+
+.docker-banner.visible {
+  display: flex;
+}
+
+.docker-banner .material-symbols-outlined { font-size: 20px; }
+.docker-banner span { flex: 1; }
+
+.docker-banner .dismiss-btn {
+  background: none;
+  border: none;
+  color: var(--yellow);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.docker-banner .dismiss-btn:hover { background: rgba(251, 191, 36, 0.15); }
+.docker-banner .dismiss-btn .material-symbols-outlined { font-size: 18px; }
+
+/* ===== Page containers ===== */
+.page {
+  display: none;
+  padding: 28px 32px 40px;
+  flex: 1;
+  animation: fadeIn 0.25s ease;
+}
+
+.page.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.page-header p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+/* ===== Glass card ===== */
+.card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+
+.card:hover {
+  border-color: var(--glass-border-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== Create Container Form ===== */
+.create-form {
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.form-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.form-group select,
+.form-group input {
+  background: var(--input-bg);
+  border: 1px solid var(--slate-lighter);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(0, 170, 255, 0.12);
+}
+
+.form-group select { cursor: pointer; appearance: none; padding-right: 32px; }
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--text-dim);
+  pointer-events: none;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn .material-symbols-outlined { font-size: 18px; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue), #0088DD);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(0, 170, 255, 0.25);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 20px rgba(0, 170, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 0.82rem;
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border: 1px solid var(--slate-lighter);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: var(--text-dim);
+}
+
+.btn-vscode {
+  background: rgba(0, 120, 212, 0.15);
+  color: #3B9EFF;
+  border: 1px solid rgba(0, 120, 212, 0.25);
+}
+
+.btn-vscode:hover {
+  background: rgba(0, 120, 212, 0.25);
+  border-color: rgba(0, 120, 212, 0.4);
+}
+
+.btn-danger-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid transparent;
+}
+
+.btn-danger-ghost:hover {
+  background: rgba(255, 77, 106, 0.1);
+  color: var(--red);
+  border-color: rgba(255, 77, 106, 0.25);
+}
+
+.btn-warning {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--yellow);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.btn-warning:hover {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.btn-success {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.btn-success:hover {
+  background: rgba(52, 211, 153, 0.2);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ===== Container cards ===== */
+.container-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.container-card {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-left: 3px solid var(--slate-lighter);
+}
+
+.container-card.running { border-left-color: var(--cyan); }
+.container-card.stopped { border-left-color: var(--slate-lighter); }
+
+.container-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.container-card.running .container-status-dot {
+  background: var(--cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.5), 0 0 20px rgba(0, 229, 255, 0.2);
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+.container-card.stopped .container-status-dot {
+  background: var(--slate-lighter);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(0, 229, 255, 0.5), 0 0 20px rgba(0, 229, 255, 0.2); }
+  50% { opacity: 0.6; box-shadow: 0 0 4px rgba(0, 229, 255, 0.3), 0 0 10px rgba(0, 229, 255, 0.1); }
+}
+
+.container-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.container-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.container-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.container-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.container-meta-item .material-symbols-outlined { font-size: 15px; }
+
+.container-status-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.container-card.running .container-status-badge {
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.container-card.stopped .container-status-badge {
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--text-dim);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.container-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ===== Images page ===== */
+.image-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.image-card {
+  padding: 24px;
+  max-width: 560px;
+}
+
+.image-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.image-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, rgba(0, 170, 255, 0.15), rgba(0, 229, 255, 0.08));
+  border: 1px solid rgba(0, 170, 255, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-icon .material-symbols-outlined { font-size: 24px; color: var(--blue); }
+
+.image-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.image-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.image-description {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.image-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tag {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  background: rgba(0, 170, 255, 0.08);
+  border: 1px solid rgba(0, 170, 255, 0.15);
+  border-radius: 6px;
+  color: var(--blue);
+}
+
+.image-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.image-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.image-status .material-symbols-outlined { font-size: 16px; }
+.image-status.built { color: var(--green); }
+.image-status.not-built { color: var(--text-dim); }
+.image-status.needs-rebuild { color: var(--yellow); }
+
+.image-hash {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+/* ===== Prerequisites page ===== */
+.prereq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 480px;
+}
+
+.prereq-item {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.prereq-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prereq-icon.pass {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
+}
+
+.prereq-icon.fail {
+  background: rgba(255, 77, 106, 0.12);
+  color: var(--red);
+}
+
+.prereq-icon .material-symbols-outlined { font-size: 20px; }
+
+.prereq-text {
+  flex: 1;
+}
+
+.prereq-label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.prereq-sublabel {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.prereq-status {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.prereq-status.pass { color: var(--green); }
+.prereq-status.fail { color: var(--red); }
+
+/* ===== Settings page ===== */
+.settings-placeholder {
+  padding: 40px 24px;
+  text-align: center;
+  max-width: 480px;
+}
+
+.settings-placeholder .material-symbols-outlined {
+  font-size: 48px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.settings-placeholder h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.settings-placeholder p {
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+/* ===== Build Log Drawer ===== */
+.drawer-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--drawer-width);
+  max-width: 90vw;
+  background: var(--slate);
+  border-left: 1px solid var(--glass-border);
+  z-index: 210;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer.open { transform: translateX(0); }
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.drawer-header h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-header h3 .material-symbols-outlined { font-size: 20px; color: var(--blue); }
+
+.drawer-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  transition: all 0.2s;
+}
+
+.drawer-close:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.log-output {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.78rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-output .log-step {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.log-output .log-error {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.log-output .log-success {
+  color: var(--green);
+}
+
+.log-output .log-dim {
+  color: var(--text-dim);
+}
+
+/* ===== Empty state ===== */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-dim);
+}
+
+.empty-state .material-symbols-outlined {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 0.9rem;
+}
+
+/* ===== Spinner ===== */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Confirmation dialog ===== */
+.confirm-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.confirm-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.confirm-dialog {
+  background: var(--slate);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.confirm-dialog h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.confirm-dialog p {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  margin-bottom: 20px;
+}
+
+.confirm-dialog .confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* ===== Light mode overrides ===== */
+html.light .card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+html.light .card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+html.light .btn-ghost {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: var(--slate-lighter);
+}
+html.light .btn-ghost:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+html.light .image-description {
+  background: rgba(0, 0, 0, 0.03);
+}
+html.light .tag {
+  background: rgba(0, 136, 221, 0.06);
+  border-color: rgba(0, 136, 221, 0.15);
+}
+html.light .drawer {
+  background: #FFFFFF;
+  border-left-color: var(--glass-border);
+}
+html.light .log-output {
+  color: var(--text-secondary);
+}
+html.light .log-output .log-dim {
+  color: var(--text-dim);
+}
+html.light .container-card.stopped .container-status-dot {
+  background: var(--slate-lighter);
+}
+html.light .container-card.stopped .container-status-badge {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+html.light .sidebar-brand h1 {
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+html.light .sidebar-brand .brand-icon {
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+}
+html.light ::-webkit-scrollbar-thumb { background: var(--slate-lighter); }
+html.light ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+html.light .confirm-dialog {
+  background: #FFFFFF;
+}
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 900px) {
+  .create-form { flex-direction: column; align-items: stretch; }
+  .form-group { min-width: unset; }
+  .container-card { flex-wrap: wrap; }
+  .container-actions { width: 100%; justify-content: flex-end; margin-top: 8px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <span class="material-symbols-outlined">deployed_code</span>
+      </div>
+      <h1>Docker<br>Launcher</h1>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-link active" data-page="containers">
+        <span class="material-symbols-outlined">view_in_ar</span>
+        Containers
+      </a>
+      <a class="nav-link" data-page="images">
+        <span class="material-symbols-outlined">layers</span>
+        Images
+      </a>
+      <a class="nav-link" data-page="prerequisites">
+        <span class="material-symbols-outlined">checklist</span>
+        Prerequisites
+      </a>
+      <a class="nav-link" data-page="settings">
+        <span class="material-symbols-outlined">settings</span>
+        Settings
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="theme-toggle" id="themeToggle">
+        <span class="material-symbols-outlined">light_mode</span>
+        <span>Light Theme</span>
+      </button>
+      <div class="sidebar-version" id="versionLabel"></div>
+    </div>
+  </aside>
+
+  <!-- ===== Main Content ===== -->
+  <main class="main">
+
+    <!-- Docker status banner -->
+    <div class="docker-banner" id="dockerBanner">
+      <span class="material-symbols-outlined">warning</span>
+      <span id="dockerBannerText">Docker Desktop is not running. Start Docker to manage containers.</span>
+      <button class="dismiss-btn" id="dismissBannerBtn" title="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- ===== Containers Page ===== -->
+    <div class="page active" id="page-containers">
+      <div class="page-header">
+        <h2>Containers</h2>
+        <p>Create and manage your Docker development containers.</p>
+      </div>
+
+      <!-- Create container form -->
+      <div class="card create-form" id="createForm">
+        <div class="form-group">
+          <label>Image</label>
+          <div class="select-wrapper">
+            <select id="createImage">
+              <option value="">Loading images...</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="flex: 1.4;">
+          <label>Repository URL</label>
+          <input type="text" id="createRepoUrl" placeholder="https://github.com/user/repo">
+        </div>
+        <div class="form-group">
+          <label>Container Name</label>
+          <input type="text" id="createName" placeholder="my-project">
+        </div>
+        <button class="btn btn-primary" id="createBtn" style="margin-bottom: 1px;">
+          <span class="material-symbols-outlined">add</span>
+          Create
+        </button>
+      </div>
+
+      <!-- Container list -->
+      <div class="container-list" id="containerList"></div>
+    </div>
+
+    <!-- ===== Images Page ===== -->
+    <div class="page" id="page-images">
+      <div class="page-header">
+        <h2>Images</h2>
+        <p>Manage Docker images used to create development containers.</p>
+      </div>
+
+      <div class="image-grid" id="imageList"></div>
+    </div>
+
+    <!-- ===== Prerequisites Page ===== -->
+    <div class="page" id="page-prerequisites">
+      <div class="page-header">
+        <h2>Prerequisites</h2>
+        <p>Required tools and services for Docker Launcher.</p>
+      </div>
+
+      <div class="prereq-list" id="prereqList"></div>
+    </div>
+
+    <!-- ===== Settings Page ===== -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <h2>Settings</h2>
+        <p>Configure Docker Launcher preferences.</p>
+      </div>
+
+      <div class="card settings-placeholder">
+        <span class="material-symbols-outlined">tune</span>
+        <h3>Settings coming soon</h3>
+        <p>Configuration options for themes, default images, and advanced Docker settings will appear here.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===== Build Log Drawer ===== -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <h3>
+      <span class="material-symbols-outlined">terminal</span>
+      <span id="drawerTitle">Build Log</span>
+    </h3>
+    <button class="drawer-close" id="drawerCloseBtn">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+  <div class="drawer-body">
+    <div class="log-output" id="logOutput"></div>
+  </div>
+</div>
+
+<!-- ===== Confirmation Dialog ===== -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-dialog">
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p id="confirmMessage">This action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-sm btn-ghost" id="confirmCancel">Cancel</button>
+      <button class="btn btn-sm btn-primary" id="confirmOk" style="background: var(--red); box-shadow: 0 2px 12px rgba(255, 77, 106, 0.25);">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // =========================================================================
+  // Utility helpers
+  // =========================================================================
+
+  function esc(str) {
+    if (str == null) return '';
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(String(str)));
+    return div.innerHTML;
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return esc(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    var seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    var minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + ' min ago';
+    var hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+    var days = Math.floor(hours / 24);
+    if (days < 7) return days === 1 ? 'Yesterday' : days + ' days ago';
+    return formatDate(iso);
+  }
+
+  // =========================================================================
+  // State
+  // =========================================================================
+
+  var state = {
+    containers: [],
+    images: [],
+    prerequisites: null,
+    version: '',
+    dockerDown: false,
+    activePage: 'containers',
+    polling: null,
+    activeSSE: null
+  };
+
+  // =========================================================================
+  // DOM references
+  // =========================================================================
+
+  var $dockerBanner     = document.getElementById('dockerBanner');
+  var $dockerBannerText = document.getElementById('dockerBannerText');
+  var $dismissBannerBtn = document.getElementById('dismissBannerBtn');
+  var $containerList    = document.getElementById('containerList');
+  var $imageList        = document.getElementById('imageList');
+  var $prereqList       = document.getElementById('prereqList');
+  var $createImage      = document.getElementById('createImage');
+  var $createRepoUrl    = document.getElementById('createRepoUrl');
+  var $createName       = document.getElementById('createName');
+  var $createBtn        = document.getElementById('createBtn');
+  var $drawerOverlay    = document.getElementById('drawerOverlay');
+  var $drawer           = document.getElementById('drawer');
+  var $drawerTitle      = document.getElementById('drawerTitle');
+  var $drawerCloseBtn   = document.getElementById('drawerCloseBtn');
+  var $logOutput        = document.getElementById('logOutput');
+  var $themeToggle      = document.getElementById('themeToggle');
+  var $versionLabel     = document.getElementById('versionLabel');
+  var $confirmOverlay   = document.getElementById('confirmOverlay');
+  var $confirmTitle     = document.getElementById('confirmTitle');
+  var $confirmMessage   = document.getElementById('confirmMessage');
+  var $confirmCancel    = document.getElementById('confirmCancel');
+  var $confirmOk        = document.getElementById('confirmOk');
+
+  // =========================================================================
+  // API helpers
+  // =========================================================================
+
+  function api(method, path, body) {
+    var opts = {
+      method: method,
+      headers: {}
+    };
+    if (body !== undefined) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function(res) {
+      if (res.status === 503) {
+        return res.json().then(function(data) {
+          if (data && data.docker_not_running) {
+            showDockerBanner(data.detail || 'Docker Desktop is not running.');
+          }
+          return Promise.reject(data);
+        });
+      }
+      if (!res.ok) {
+        return res.json().then(function(data) {
+          return Promise.reject(data);
+        }).catch(function() {
+          return Promise.reject({ detail: 'Request failed with status ' + res.status });
+        });
+      }
+      hideDockerBanner();
+      return res.json();
+    });
+  }
+
+  function streamSSE(method, url, onLine, onDone) {
+    var opts = { method: method };
+    state.activeSSE = true;
+    fetch(url, opts).then(function(res) {
+      if (res.status === 503) {
+        return res.json().then(function(data) {
+          if (data && data.docker_not_running) {
+            showDockerBanner(data.detail || 'Docker Desktop is not running.');
+          }
+          if (onDone) onDone(false);
+          return Promise.reject(data);
+        });
+      }
+      if (!res.ok) {
+        if (onDone) onDone(false);
+        return;
+      }
+      hideDockerBanner();
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+
+      function read() {
+        reader.read().then(function(result) {
+          if (result.done) {
+            // Process any remaining buffer
+            if (buffer.length > 0) {
+              processBuffer(buffer);
+            }
+            state.activeSSE = null;
+            if (onDone) onDone(true);
+            return;
+          }
+          buffer += decoder.decode(result.value, { stream: true });
+          buffer = processBuffer(buffer);
+          read();
+        }).catch(function() {
+          state.activeSSE = null;
+          if (onDone) onDone(false);
+        });
+      }
+
+      function processBuffer(buf) {
+        var lines = buf.split('\n');
+        // Keep the last partial line in the buffer
+        var remainder = lines.pop();
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          if (line.indexOf('data: ') === 0) {
+            onLine(line.substring(6));
+          }
+        }
+        return remainder || '';
+      }
+
+      read();
+    }).catch(function() {
+      state.activeSSE = null;
+      if (onDone) onDone(false);
+    });
+  }
+
+  // =========================================================================
+  // Docker banner
+  // =========================================================================
+
+  function showDockerBanner(msg) {
+    state.dockerDown = true;
+    $dockerBannerText.textContent = msg || 'Docker Desktop is not running. Start Docker to manage containers.';
+    $dockerBanner.classList.add('visible');
+  }
+
+  function hideDockerBanner() {
+    if (state.dockerDown) {
+      state.dockerDown = false;
+      $dockerBanner.classList.remove('visible');
+    }
+  }
+
+  $dismissBannerBtn.addEventListener('click', function() {
+    $dockerBanner.classList.remove('visible');
+  });
+
+  // =========================================================================
+  // Navigation
+  // =========================================================================
+
+  function navigate(page) {
+    state.activePage = page;
+    document.querySelectorAll('.nav-link').forEach(function(link) {
+      link.classList.toggle('active', link.dataset.page === page);
+    });
+    document.querySelectorAll('.page').forEach(function(p) {
+      p.classList.remove('active');
+    });
+    var target = document.getElementById('page-' + page);
+    if (target) target.classList.add('active');
+  }
+
+  document.querySelectorAll('.nav-link').forEach(function(link) {
+    link.addEventListener('click', function() {
+      navigate(link.dataset.page);
+    });
+  });
+
+  // =========================================================================
+  // Theme toggle
+  // =========================================================================
+
+  function applyTheme(theme) {
+    var html = document.documentElement;
+    var icon = $themeToggle.querySelector('.material-symbols-outlined');
+    var label = $themeToggle.querySelector('span:last-child');
+    if (theme === 'light') {
+      html.className = 'light';
+      icon.textContent = 'dark_mode';
+      label.textContent = 'Dark Theme';
+    } else {
+      html.className = 'dark';
+      icon.textContent = 'light_mode';
+      label.textContent = 'Light Theme';
+    }
+    localStorage.setItem('theme', theme);
+  }
+
+  $themeToggle.addEventListener('click', function() {
+    var current = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
+
+  // Restore saved theme
+  (function() {
+    var saved = localStorage.getItem('theme');
+    if (saved) applyTheme(saved);
+  })();
+
+  // =========================================================================
+  // Drawer
+  // =========================================================================
+
+  function openDrawer(title) {
+    $drawerTitle.textContent = title || 'Build Log';
+    $logOutput.innerHTML = '';
+    $drawerOverlay.classList.add('open');
+    $drawer.classList.add('open');
+  }
+
+  function closeDrawer() {
+    $drawerOverlay.classList.remove('open');
+    $drawer.classList.remove('open');
+  }
+
+  $drawerOverlay.addEventListener('click', closeDrawer);
+  $drawerCloseBtn.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeDrawer();
+      closeConfirm();
+    }
+  });
+
+  function appendLogLine(text) {
+    var line = document.createElement('div');
+    // Color-code: steps=blue, errors=red, success=green, rest=dim
+    var t = text;
+    if (/^Step \d+\/\d+/i.test(t)) {
+      line.className = 'log-step';
+      line.textContent = t;
+    } else if (/error|fail|fatal|traceback/i.test(t)) {
+      line.className = 'log-error';
+      line.textContent = t;
+    } else if (/success|completed|built/i.test(t)) {
+      line.className = 'log-success';
+      line.textContent = t;
+    } else {
+      line.className = 'log-dim';
+      line.textContent = t;
+    }
+    $logOutput.appendChild(line);
+    // Auto-scroll to bottom
+    $logOutput.parentElement.scrollTop = $logOutput.parentElement.scrollHeight;
+  }
+
+  // =========================================================================
+  // Confirmation dialog
+  // =========================================================================
+
+  var confirmResolver = null;
+
+  function showConfirm(title, message, okLabel) {
+    $confirmTitle.textContent = title;
+    $confirmMessage.textContent = message;
+    $confirmOk.textContent = okLabel || 'Delete';
+    $confirmOverlay.classList.add('open');
+    return new Promise(function(resolve) {
+      confirmResolver = resolve;
+    });
+  }
+
+  function closeConfirm() {
+    $confirmOverlay.classList.remove('open');
+    if (confirmResolver) {
+      confirmResolver(false);
+      confirmResolver = null;
+    }
+  }
+
+  $confirmCancel.addEventListener('click', function() {
+    closeConfirm();
+  });
+
+  $confirmOk.addEventListener('click', function() {
+    $confirmOverlay.classList.remove('open');
+    if (confirmResolver) {
+      var r = confirmResolver;
+      confirmResolver = null;
+      r(true);
+    }
+  });
+
+  $confirmOverlay.addEventListener('click', function(e) {
+    if (e.target === $confirmOverlay) closeConfirm();
+  });
+
+  // =========================================================================
+  // Render: Containers
+  // =========================================================================
+
+  function renderContainers() {
+    var containers = state.containers;
+    if (!containers || containers.length === 0) {
+      $containerList.innerHTML =
+        '<div class="empty-state">' +
+          '<span class="material-symbols-outlined">view_in_ar</span>' +
+          '<p>No containers yet. Create one above to get started.</p>' +
+        '</div>';
+      return;
+    }
+
+    // Sort: running first, then by created_at descending
+    containers.sort(function(a, b) {
+      var aRunning = a.status === 'running' ? 0 : 1;
+      var bRunning = b.status === 'running' ? 0 : 1;
+      if (aRunning !== bRunning) return aRunning - bRunning;
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+
+    var html = '';
+    for (var i = 0; i < containers.length; i++) {
+      var c = containers[i];
+      var isRunning = c.status === 'running';
+      var statusClass = isRunning ? 'running' : 'stopped';
+      var statusLabel = isRunning ? 'Running' : (c.status === 'exited' ? 'Stopped' : esc(c.status || 'Unknown'));
+
+      html += '<div class="card container-card ' + statusClass + '" data-id="' + esc(c.id) + '">';
+      html += '<div class="container-status-dot"></div>';
+      html += '<div class="container-info">';
+      html += '<div class="container-name">' + esc(c.name) + '</div>';
+      html += '<div class="container-meta">';
+      html += '<span class="container-meta-item"><span class="material-symbols-outlined">layers</span>' + esc(c.image) + '</span>';
+      if (c.repo_url) {
+        html += '<span class="container-meta-item"><span class="material-symbols-outlined">link</span>' + esc(c.repo_url) + '</span>';
+      }
+      html += '<span class="container-meta-item"><span class="material-symbols-outlined">calendar_today</span>' + esc(formatDate(c.created_at)) + '</span>';
+      if (c.last_opened_at) {
+        html += '<span class="container-meta-item"><span class="material-symbols-outlined">schedule</span>' + esc(timeAgo(c.last_opened_at)) + '</span>';
+      }
+      html += '</div></div>';
+      html += '<span class="container-status-badge">' + statusLabel + '</span>';
+      html += '<div class="container-actions">';
+
+      if (isRunning) {
+        html += '<button class="btn btn-sm btn-warning" data-action="stop" data-id="' + esc(c.id) + '">' +
+          '<span class="material-symbols-outlined">stop_circle</span>Stop</button>';
+      } else {
+        html += '<button class="btn btn-sm btn-success" data-action="start" data-id="' + esc(c.id) + '">' +
+          '<span class="material-symbols-outlined">play_circle</span>Start</button>';
+      }
+      html += '<button class="btn btn-sm btn-vscode" data-action="vscode" data-id="' + esc(c.id) + '">' +
+        '<span class="material-symbols-outlined">code</span>VS Code</button>';
+      html += '<button class="btn btn-sm btn-danger-ghost" data-action="delete" data-id="' + esc(c.id) + '" data-name="' + esc(c.name) + '">' +
+        '<span class="material-symbols-outlined">delete</span></button>';
+
+      html += '</div></div>';
+    }
+
+    $containerList.innerHTML = html;
+  }
+
+  // Container action delegation
+  $containerList.addEventListener('click', function(e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var action = btn.dataset.action;
+    var id = btn.dataset.id;
+
+    if (action === 'start') {
+      setButtonLoading(btn, true);
+      api('POST', '/api/containers/' + encodeURIComponent(id) + '/start').then(function() {
+        fetchContainers();
+      }).catch(function(err) {
+        alert('Failed to start container: ' + (err.detail || 'Unknown error'));
+      }).finally(function() {
+        setButtonLoading(btn, false);
+      });
+    } else if (action === 'stop') {
+      setButtonLoading(btn, true);
+      api('POST', '/api/containers/' + encodeURIComponent(id) + '/stop').then(function() {
+        fetchContainers();
+      }).catch(function(err) {
+        alert('Failed to stop container: ' + (err.detail || 'Unknown error'));
+      }).finally(function() {
+        setButtonLoading(btn, false);
+      });
+    } else if (action === 'vscode') {
+      setButtonLoading(btn, true);
+      api('POST', '/api/containers/' + encodeURIComponent(id) + '/vscode').then(function() {
+        // Refresh to update last_opened_at
+        fetchContainers();
+      }).catch(function(err) {
+        alert('Failed to open VS Code: ' + (err.detail || 'Unknown error'));
+      }).finally(function() {
+        setButtonLoading(btn, false);
+      });
+    } else if (action === 'delete') {
+      var containerName = btn.dataset.name || id;
+      showConfirm(
+        'Delete Container',
+        'Are you sure you want to delete "' + containerName + '"? This action cannot be undone.',
+        'Delete'
+      ).then(function(confirmed) {
+        if (!confirmed) return;
+        setButtonLoading(btn, true);
+        api('DELETE', '/api/containers/' + encodeURIComponent(id)).then(function() {
+          fetchContainers();
+        }).catch(function(err) {
+          alert('Failed to delete container: ' + (err.detail || 'Unknown error'));
+        }).finally(function() {
+          setButtonLoading(btn, false);
+        });
+      });
+    }
+  });
+
+  function setButtonLoading(btn, loading) {
+    if (loading) {
+      btn.disabled = true;
+      btn._origHTML = btn.innerHTML;
+      var span = document.createElement('span');
+      span.className = 'spinner';
+      btn.innerHTML = '';
+      btn.appendChild(span);
+    } else {
+      btn.disabled = false;
+      if (btn._origHTML) {
+        btn.innerHTML = btn._origHTML;
+        delete btn._origHTML;
+      }
+    }
+  }
+
+  // =========================================================================
+  // Render: Images
+  // =========================================================================
+
+  function renderImages() {
+    var images = state.images;
+    if (!images || images.length === 0) {
+      $imageList.innerHTML =
+        '<div class="empty-state">' +
+          '<span class="material-symbols-outlined">layers</span>' +
+          '<p>No images configured.</p>' +
+        '</div>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < images.length; i++) {
+      var img = images[i];
+      html += '<div class="card image-card">';
+      html += '<div class="image-header">';
+      html += '<div class="image-icon"><span class="material-symbols-outlined">inventory_2</span></div>';
+      html += '<div>';
+      html += '<div class="image-title">' + esc(img.name) + '</div>';
+      if (img.description) {
+        html += '<div class="image-subtitle">' + esc(img.description) + '</div>';
+      }
+      html += '</div></div>';
+
+      if (img.description) {
+        html += '<div class="image-description">' + esc(img.description) + '</div>';
+      }
+
+      html += '<div class="image-footer">';
+
+      // Status indicator
+      if (img.needs_rebuild) {
+        html += '<span class="image-status needs-rebuild"><span class="material-symbols-outlined">warning</span>Needs rebuild</span>';
+      } else if (img.built) {
+        html += '<span class="image-status built"><span class="material-symbols-outlined">check_circle</span>Built';
+        if (img.built_at) html += ' &mdash; ' + esc(formatDate(img.built_at));
+        html += '</span>';
+      } else {
+        html += '<span class="image-status not-built"><span class="material-symbols-outlined">radio_button_unchecked</span>Not built</span>';
+      }
+
+      var btnClass = img.needs_rebuild ? 'btn-warning' : 'btn-primary';
+      var btnLabel = img.needs_rebuild ? 'Rebuild' : (img.built ? 'Rebuild' : 'Build');
+      html += '<button class="btn btn-sm ' + btnClass + '" data-build-image="' + esc(img.name) + '">' +
+        '<span class="material-symbols-outlined">refresh</span>' + btnLabel + '</button>';
+
+      html += '</div></div>';
+    }
+
+    $imageList.innerHTML = html;
+  }
+
+  // Image build action delegation
+  $imageList.addEventListener('click', function(e) {
+    var btn = e.target.closest('button[data-build-image]');
+    if (!btn) return;
+    var imageName = btn.dataset.buildImage;
+    buildImage(imageName);
+  });
+
+  function buildImage(imageName, onDone) {
+    openDrawer('Build Log \u2014 ' + imageName);
+    appendLogLine('Starting build for image: ' + imageName + '...');
+    appendLogLine('');
+
+    streamSSE(
+      'POST',
+      '/api/images/' + encodeURIComponent(imageName) + '/build?force=true',
+      function(line) {
+        appendLogLine(line);
+      },
+      function(success) {
+        if (success) {
+          appendLogLine('');
+          appendLogLine('Build stream ended.');
+        } else {
+          appendLogLine('');
+          appendLogLine('Build failed or connection lost.');
+        }
+        fetchImages();
+        if (onDone) onDone(success);
+      }
+    );
+  }
+
+  // =========================================================================
+  // Render: Prerequisites
+  // =========================================================================
+
+  function renderPrerequisites() {
+    var p = state.prerequisites;
+    if (!p) {
+      $prereqList.innerHTML =
+        '<div class="empty-state">' +
+          '<span class="material-symbols-outlined">checklist</span>' +
+          '<p>Loading prerequisites...</p>' +
+        '</div>';
+      return;
+    }
+
+    var items = [
+      {
+        key: 'gh_installed',
+        label: 'GitHub CLI (gh)',
+        passSubLabel: 'Installed and available on PATH',
+        failSubLabel: 'Not installed',
+        passStatus: 'Installed',
+        failStatus: 'Missing',
+        action: 'install-gh',
+        actionLabel: 'Install'
+      },
+      {
+        key: 'gh_authenticated',
+        label: 'GitHub Authenticated',
+        passSubLabel: 'Signed in with GitHub',
+        failSubLabel: 'Not authenticated',
+        passStatus: 'Connected',
+        failStatus: 'Not Connected',
+        action: 'gh-login',
+        actionLabel: 'Login'
+      }
+    ];
+
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var passed = p[item.key];
+
+      html += '<div class="card prereq-item">';
+      html += '<div class="prereq-icon ' + (passed ? 'pass' : 'fail') + '">';
+      html += '<span class="material-symbols-outlined">' + (passed ? 'check_circle' : 'cancel') + '</span>';
+      html += '</div>';
+      html += '<div class="prereq-text">';
+      html += '<div class="prereq-label">' + esc(item.label) + '</div>';
+      html += '<div class="prereq-sublabel">' + esc(passed ? item.passSubLabel : item.failSubLabel) + '</div>';
+      html += '</div>';
+
+      if (passed) {
+        html += '<span class="prereq-status pass">' + esc(item.passStatus) + '</span>';
+      } else {
+        html += '<button class="btn btn-sm btn-primary" data-prereq-action="' + esc(item.action) + '">' +
+          '<span class="material-symbols-outlined">download</span>' + esc(item.actionLabel) + '</button>';
+      }
+
+      html += '</div>';
+    }
+
+    $prereqList.innerHTML = html;
+  }
+
+  // Prerequisites action delegation
+  $prereqList.addEventListener('click', function(e) {
+    var btn = e.target.closest('button[data-prereq-action]');
+    if (!btn) return;
+    var action = btn.dataset.prereqAction;
+
+    var title = action === 'install-gh' ? 'Install GitHub CLI' : 'GitHub Login';
+    openDrawer(title);
+
+    setButtonLoading(btn, true);
+
+    streamSSE(
+      'POST',
+      '/api/prerequisites/' + action,
+      function(line) {
+        appendLogLine(line);
+      },
+      function(success) {
+        if (success) {
+          appendLogLine('');
+          appendLogLine('Completed successfully.');
+        } else {
+          appendLogLine('');
+          appendLogLine('Process failed or connection lost.');
+        }
+        fetchPrerequisites();
+        setButtonLoading(btn, false);
+      }
+    );
+  });
+
+  // =========================================================================
+  // Render: Image select dropdown for container creation
+  // =========================================================================
+
+  function renderImageSelect() {
+    var images = state.images;
+    var html = '';
+    if (!images || images.length === 0) {
+      html = '<option value="">No images available</option>';
+    } else {
+      for (var i = 0; i < images.length; i++) {
+        var img = images[i];
+        var desc = img.description ? ' \u2014 ' + img.description : '';
+        html += '<option value="' + esc(img.name) + '">' + esc(img.name) + esc(desc) + '</option>';
+      }
+    }
+    $createImage.innerHTML = html;
+  }
+
+  // =========================================================================
+  // Create container
+  // =========================================================================
+
+  $createBtn.addEventListener('click', function() {
+    var imageName = $createImage.value;
+    var repoUrl = $createRepoUrl.value.trim();
+    var name = $createName.value.trim();
+
+    if (!imageName) {
+      alert('Please select an image.');
+      return;
+    }
+    if (!repoUrl) {
+      alert('Please enter a repository URL.');
+      return;
+    }
+
+    // Check if image needs building
+    var image = null;
+    for (var i = 0; i < state.images.length; i++) {
+      if (state.images[i].name === imageName) {
+        image = state.images[i];
+        break;
+      }
+    }
+
+    if (image && !image.built) {
+      // Auto-build the image first
+      buildImage(imageName, function(success) {
+        if (success) {
+          doCreateContainer(imageName, repoUrl, name);
+        }
+      });
+      return;
+    }
+
+    doCreateContainer(imageName, repoUrl, name);
+  });
+
+  function doCreateContainer(imageName, repoUrl, name) {
+    setButtonLoading($createBtn, true);
+    var body = { image: imageName, repo_url: repoUrl };
+    if (name) body.name = name;
+
+    api('POST', '/api/containers', body).then(function() {
+      $createRepoUrl.value = '';
+      $createName.value = '';
+      fetchContainers();
+    }).catch(function(err) {
+      alert('Failed to create container: ' + (err.detail || 'Unknown error'));
+    }).finally(function() {
+      setButtonLoading($createBtn, false);
+    });
+  }
+
+  // =========================================================================
+  // Data fetching
+  // =========================================================================
+
+  function fetchContainers() {
+    return api('GET', '/api/containers').then(function(data) {
+      state.containers = data || [];
+      renderContainers();
+    }).catch(function() {
+      // Docker may be down, banner already shown
+    });
+  }
+
+  function fetchImages() {
+    return api('GET', '/api/images').then(function(data) {
+      state.images = data || [];
+      renderImages();
+      renderImageSelect();
+    }).catch(function() {
+      // Docker may be down, banner already shown
+    });
+  }
+
+  function fetchPrerequisites() {
+    return api('GET', '/api/prerequisites').then(function(data) {
+      state.prerequisites = data;
+      renderPrerequisites();
+    }).catch(function() {
+      // Endpoint failed
+    });
+  }
+
+  function fetchVersion() {
+    return api('GET', '/api/version').then(function(data) {
+      if (data && data.version) {
+        state.version = data.version;
+        $versionLabel.textContent = 'v' + data.version;
+      }
+    }).catch(function() {
+      // Version endpoint may not be available
+    });
+  }
+
+  // =========================================================================
+  // Polling
+  // =========================================================================
+
+  function startPolling() {
+    if (state.polling) clearInterval(state.polling);
+    state.polling = setInterval(function() {
+      fetchContainers();
+      fetchImages();
+    }, 5000);
+  }
+
+  // =========================================================================
+  // Initialization
+  // =========================================================================
+
+  function init() {
+    fetchVersion();
+    fetchContainers();
+    fetchImages();
+    fetchPrerequisites();
+    startPolling();
+  }
+
+  init();
+
+})();
+</script>
+</body>
+</html>

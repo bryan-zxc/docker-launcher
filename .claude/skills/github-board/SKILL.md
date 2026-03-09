@@ -1,0 +1,161 @@
+---
+name: github-board
+description: Manage GitHub project board tickets for the docker-launcher project. Use whenever creating issues — epics, stories, or bugs — transitioning ticket status, completing tickets, or any project board management. Triggers on requests to create tickets, track work, manage the backlog, or update issue status.
+---
+
+# GitHub Board Management
+
+## Project Board Details
+
+- **Project number:** 9
+- **Project node ID:** PVT_kwHOCz6Fr84BRN_X
+- **Owner:** bryan-zxc
+- **Repo:** bryan-zxc/docker-launcher
+- **Status field ID:** PVTSSF_lAHOCz6Fr84BRN_Xzg_HD2M
+
+### Status Options
+
+| Status | Option ID |
+|---|---|
+| Backlog | f75ad846 |
+| In Progress | 47fc9ee4 |
+| Done | 98236657 |
+
+## Issue Types
+
+- **Epic** — high-level feature grouping (label: `epic`)
+- **Story** — deliverable slice of functionality within an epic (label: `story`)
+- **Bug** — something that used to work but is now broken (label: `bug`)
+
+Stories are linked to epics as sub-issues via the GitHub GraphQL API. Bugs are standalone — they don't belong to an epic.
+
+## Adding to Board
+
+After creating any issue, add it to the board **and immediately set its status to Backlog**. Items added via CLI have no status by default — without this step they won't appear in any board column.
+
+```bash
+ITEM_ID=$(gh project item-add 9 --owner bryan-zxc --url <issue-url> --format json --jq '.id')
+
+gh project item-edit \
+  --project-id PVT_kwHOCz6Fr84BRN_X \
+  --id "$ITEM_ID" \
+  --field-id PVTSSF_lAHOCz6Fr84BRN_Xzg_HD2M \
+  --single-select-option-id f75ad846
+```
+
+## Creating an Epic
+
+```bash
+gh issue create --repo bryan-zxc/docker-launcher \
+  --title "Epic title" \
+  --body "Description" \
+  --label "epic" \
+  --assignee "@me"
+```
+
+Then add to the project board (see [Adding to Board](#adding-to-board)).
+
+## Creating a Bug
+
+```bash
+gh issue create --repo bryan-zxc/docker-launcher \
+  --title "Bug title" \
+  --body "Description" \
+  --label "bug" \
+  --assignee "@me"
+```
+
+Then add to the project board (see [Adding to Board](#adding-to-board)).
+
+## Creating a Story Under an Epic
+
+Create the story issue:
+
+```bash
+gh issue create --repo bryan-zxc/docker-launcher \
+  --title "Story title" \
+  --body "Description" \
+  --label "story" \
+  --assignee "@me"
+```
+
+Add to the project board (see [Adding to Board](#adding-to-board)).
+
+Link as sub-issue to the epic using node IDs:
+
+```bash
+EPIC_NODE_ID=$(gh api repos/bryan-zxc/docker-launcher/issues/<epic-number> --jq '.node_id')
+STORY_NODE_ID=$(gh api repos/bryan-zxc/docker-launcher/issues/<story-number> --jq '.node_id')
+
+gh api graphql -f query="
+mutation {
+  addSubIssue(input: {issueId: \"$EPIC_NODE_ID\", subIssueId: \"$STORY_NODE_ID\"}) {
+    issue { id title }
+    subIssue { id title }
+  }
+}"
+```
+
+## Transitioning Status
+
+Use the item ID captured from `gh project item-add` (see [Adding to Board](#adding-to-board)), or look it up (see [Looking Up Item IDs](#looking-up-item-ids)). Then:
+
+```bash
+gh project item-edit \
+  --project-id PVT_kwHOCz6Fr84BRN_X \
+  --id <item-id> \
+  --field-id PVTSSF_lAHOCz6Fr84BRN_Xzg_HD2M \
+  --single-select-option-id <status-option-id>
+```
+
+Use the status option IDs from the table above.
+
+## Looking Up Item IDs
+
+**Always use `--limit 500`** when querying the project board — the default limit is 30, which silently omits items beyond that. **Always guard against empty results** before passing the ID to `gh project item-edit`.
+
+```bash
+ITEM_ID=$(gh project item-list 9 --owner bryan-zxc --limit 500 --format json --jq ".items[] | select(.content.number == <issue-number>) | .id")
+
+if [ -z "$ITEM_ID" ]; then
+  echo "ERROR: Could not find issue <issue-number> on the project board"
+  exit 1
+fi
+```
+
+## Completing a Ticket
+
+To complete a ticket, transition its board status to **Done**. Look up the item ID first, guard against empty, then set the status:
+
+```bash
+ITEM_ID=$(gh project item-list 9 --owner bryan-zxc --limit 500 --format json --jq ".items[] | select(.content.number == <issue-number>) | .id")
+
+if [ -z "$ITEM_ID" ]; then
+  echo "ERROR: Could not find issue <issue-number> on the project board"
+  exit 1
+fi
+
+gh project item-edit \
+  --project-id PVT_kwHOCz6Fr84BRN_X \
+  --id "$ITEM_ID" \
+  --field-id PVTSSF_lAHOCz6Fr84BRN_Xzg_HD2M \
+  --single-select-option-id 98236657
+```
+
+**Never use `gh issue close`** — issue state (open/closed) is not the same as board status. Always use board status transitions.
+
+## Ticket Workflow
+
+- When picking up a ticket: transition board status to **In Progress**
+- When done with a ticket: transition board status to **Done**
+- If a ticket needs to change, edit the description to the correct version — describe clearly what is eventually done, not what changed from before. Never add comments to tickets.
+
+## Rules
+
+- **Never use `gh issue close` or `gh issue reopen`** — manage completion exclusively through board status transitions. Issue state (open/closed) and board status (Backlog/In Progress/Done) are separate concepts; we only use board status.
+- Always assign `@me` — this dynamically resolves to whoever is running the command
+- Always add issues to project board 9 after creation
+- Always use the `epic`, `story`, or `bug` label as appropriate
+- When creating stories that belong to an epic, always link them as sub-issues
+- **Naming**: Name tickets from the user's perspective (developers are users too). Describe the benefit, not the technical implementation. E.g. "Reproducible database setup across environments" not "Set up Alembic".
+- **Context-rich descriptions**: Every ticket must contain enough context for a brand new Claude Code session to pick it up and deliver — current state, what to build, file paths, data model references, and verification steps. A reader should never need to chase down external context to understand or implement the ticket.

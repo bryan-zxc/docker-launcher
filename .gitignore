@@ -1,2 +1,12 @@
 .external/
 .mockups/
+__pycache__/
+*.pyc
+.venv/
+data/
+.playwright-cli/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
