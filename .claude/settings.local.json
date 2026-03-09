@@ -4,7 +4,8 @@
       "Bash(xxd:*)",
       "Bash(powershell:*)",
       "Bash(claude:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)"
     ]
   }
 }
