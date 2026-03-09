@@ -1,11 +1,33 @@
 {
   "permissions": {
     "allow": [
+      "Bash(gh project:*)",
+      "Bash(gh api:*)",
+      "Bash(gh label:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(gh issue:*)",
+      "Bash(uv:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(python:*)",
+      "Bash(tasklist:*)",
+      "Bash(git mv:*)",
+      "Bash(git status:*)",
+      "Bash(kill:*)",
+      "Bash(kill %1:*)",
+      "Bash(find:*)",
+      "Bash(gh auth:*)",
+      "Bash(docker ps:*)",
+      "Bash(gh pr:*)",
+      "Bash(wc:*)",
+      "Bash(gh run:*)",
+      "Bash(cp:*)",
       "Bash(xxd:*)",
       "Bash(powershell:*)",
       "Bash(claude:*)",
-      "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Read(//c/Users/zhye/.docker-launcher/**)",
+      "Bash(uv run:*)"
     ]
   }
 }

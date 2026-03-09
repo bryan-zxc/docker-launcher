@@ -1,0 +1,530 @@
+"""Docker image and container management via Docker SDK."""
+
+import hashlib
+import json
+import logging
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Generator
+
+import docker
+import docker.errors
+import docker.types
+
+from docker_launcher.database import (
+    cleanup_orphans,
+    delete_metadata,
+    get_metadata,
+    update_last_opened,
+)
+
+# In a PyInstaller bundle, data files are extracted to sys._MEIPASS
+_BASE_DIR = Path(
+    getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent.parent)
+)
+IMAGES_DIR = _BASE_DIR / "images"
+
+logger = logging.getLogger(__name__)
+
+
+def _gh_config_host_dir() -> Path:
+    """Return the gh CLI config directory on the host."""
+    if sys.platform == "win32":
+        return Path(os.environ.get("APPDATA", "")) / "GitHub CLI"
+    return Path.home() / ".config" / "gh"  # type: ignore[unreachable]
+
+
+def _get_gh_token() -> str | None:
+    """Extract the GitHub token from the host's gh CLI."""
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "token"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+IMAGE_PREFIX = "docker-launcher"
+CONTAINER_LABEL = "docker-launcher"
+
+CONTAINER_ENV = {
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
+}
+
+
+class DockerNotAvailableError(Exception):
+    pass
+
+
+_client: docker.DockerClient | None = None
+
+
+def _get_client() -> docker.DockerClient:
+    global _client
+    if _client is not None:
+        try:
+            _client.ping()
+        except Exception:
+            logger.info("Docker connection stale, reconnecting")
+            _client = None
+    if _client is None:
+        try:
+            _client = docker.from_env()
+            _client.ping()
+        except docker.errors.DockerException as e:
+            _client = None
+            raise DockerNotAvailableError(
+                "Docker Desktop is not running. Please start Docker Desktop and try again."
+            ) from e
+    return _client
+
+
+CONTEXT_HASH_LABEL = f"{CONTAINER_LABEL}.context-hash"
+
+
+def _build_context_hash(image_dir: Path) -> str:
+    """Hash all files in the build context to detect changes."""
+    h = hashlib.sha256()
+    for f in sorted(image_dir.rglob("*")):
+        if not f.is_file():
+            continue
+        h.update(str(f.relative_to(image_dir)).encode())
+        h.update(f.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def _image_built_at(name: str) -> str | None:
+    """Return ISO timestamp of when the image was created, or None if not built."""
+    tag = f"{IMAGE_PREFIX}/{name}:latest"
+    try:
+        img = _get_client().images.get(tag)
+        return img.attrs.get("Created", "")
+    except docker.errors.ImageNotFound:
+        return None
+
+
+def _image_is_built(name: str) -> bool:
+    """Check if a Docker image tag exists locally."""
+    tag = f"{IMAGE_PREFIX}/{name}:latest"
+    try:
+        _get_client().images.get(tag)
+        return True
+    except docker.errors.ImageNotFound:
+        return False
+
+
+def _image_needs_rebuild(name: str) -> bool:
+    """Check if the image needs rebuilding due to context changes or age."""
+    tag = f"{IMAGE_PREFIX}/{name}:latest"
+    try:
+        img = _get_client().images.get(tag)
+    except docker.errors.ImageNotFound:
+        return True
+
+    # Check if build context has changed
+    image_dir = IMAGES_DIR / name
+    if image_dir.is_dir():
+        current_hash = _build_context_hash(image_dir)
+        labels = img.labels or {}
+        stored_hash = labels.get(CONTEXT_HASH_LABEL, "")
+        if current_hash != stored_hash:
+            return True
+
+    # Check age (>7 days)
+    created = img.attrs.get("Created", "")
+    if created:
+        try:
+            built_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            age_days = (datetime.now(timezone.utc) - built_dt).days
+            if age_days > 7:
+                return True
+        except (ValueError, TypeError):
+            return True
+
+    return False
+
+
+def _read_metadata(image_dir: Path) -> dict | None:
+    """Read and parse metadata.json from an image directory."""
+    metadata_path = image_dir / "metadata.json"
+    if not metadata_path.exists():
+        return None
+    try:
+        with open(metadata_path, encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        logger.warning("Could not read %s", metadata_path, exc_info=True)
+        return None
+
+
+def list_images() -> list[dict]:
+    """Scan images/ directory and return available image definitions."""
+    results = []
+    if not IMAGES_DIR.exists():
+        return results
+    for entry in sorted(IMAGES_DIR.iterdir()):
+        if not entry.is_dir():
+            continue
+        metadata = _read_metadata(entry)
+        if metadata is None:
+            continue
+        results.append(
+            {
+                "id": entry.name,
+                **metadata,
+                "built": _image_is_built(entry.name),
+                "built_at": _image_built_at(entry.name),
+                "needs_rebuild": _image_needs_rebuild(entry.name),
+            }
+        )
+    return results
+
+
+def get_image(name: str) -> dict | None:
+    """Get a single image definition by name."""
+    image_dir = IMAGES_DIR / name
+    if not image_dir.is_dir():
+        return None
+    metadata = _read_metadata(image_dir)
+    if metadata is None:
+        return None
+    return {
+        "id": name,
+        **metadata,
+        "built": _image_is_built(name),
+        "built_at": _image_built_at(name),
+        "needs_rebuild": _image_needs_rebuild(name),
+    }
+
+
+def _ensure_installer(name: str) -> None:
+    """Ensure claude-install.sh is present before Docker build.
+
+    .exe: installer is bundled at release time, nothing to do.
+    Source: always try to download fresh; fall back to existing copy.
+    """
+    if getattr(sys, "_MEIPASS", None):
+        return
+    image_dir = IMAGES_DIR / name
+    installer = image_dir / "assets" / "claude-install.sh"
+    fetch_script = image_dir / "assets" / "fetch-claude-installer.ps1"
+    if not fetch_script.exists():
+        return
+    try:
+        subprocess.run(
+            [
+                "powershell.exe",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(fetch_script),
+            ],
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        if installer.exists():
+            return
+        raise
+
+
+def build_image(name: str, force: bool = False) -> Generator[str, None, None]:
+    """Build a Docker image, yielding log lines for streaming."""
+    image_dir = IMAGES_DIR / name
+    if not image_dir.is_dir():
+        yield f"ERROR: Image definition '{name}' not found"
+        return
+
+    tag = f"{IMAGE_PREFIX}/{name}:latest"
+
+    if not force and _image_is_built(name):
+        yield f"Image {tag} already built. Use force=true to rebuild."
+        return
+
+    try:
+        _ensure_installer(name)
+    except subprocess.CalledProcessError as e:
+        yield f"ERROR: Failed to download installer: {e}"
+        return
+
+    context_hash = _build_context_hash(image_dir)
+
+    yield f"Building {tag} from {image_dir}..."
+
+    try:
+        resp = _get_client().api.build(
+            path=str(image_dir),
+            tag=tag,
+            labels={CONTEXT_HASH_LABEL: context_hash},
+            decode=True,
+            rm=True,
+        )
+        for chunk in resp:
+            if "stream" in chunk:
+                line = chunk["stream"].rstrip("\n")
+                if line:
+                    yield line
+            elif "status" in chunk:
+                msg = chunk["status"]
+                if "progress" in chunk:
+                    msg += f" {chunk['progress']}"
+                yield msg
+            elif "error" in chunk:
+                yield f"ERROR: {chunk['error']}"
+                return
+    except docker.errors.BuildError as e:
+        yield f"ERROR: Build failed: {e}"
+        return
+    except docker.errors.APIError as e:
+        yield f"ERROR: Docker API error: {e}"
+        return
+
+    yield f"Build complete: {tag}"
+
+
+# ---------------------------------------------------------------------------
+# Container management
+# ---------------------------------------------------------------------------
+
+
+def _container_info(container) -> dict:
+    """Extract info dict from a Docker container object."""
+    labels = container.labels or {}
+    return {
+        "id": container.short_id,
+        "full_id": container.id,
+        "name": container.name,
+        "image": labels.get(f"{CONTAINER_LABEL}.image", ""),
+        "repo_url": labels.get(f"{CONTAINER_LABEL}.repo", ""),
+        "created_at": labels.get(f"{CONTAINER_LABEL}.created", ""),
+        "status": container.status,
+    }
+
+
+def list_containers() -> list[dict]:
+    """List all containers managed by this app."""
+    containers = _get_client().containers.list(
+        all=True, filters={"label": CONTAINER_LABEL}
+    )
+    results = [_container_info(c) for c in containers]
+
+    live_ids = {r["full_id"] for r in results}
+    cleanup_orphans(live_ids)
+
+    for r in results:
+        meta = get_metadata(r["full_id"])
+        r["last_opened_at"] = meta.get("last_opened_at") if meta else None
+
+    return results
+
+
+def create_container(
+    image_name: str,
+    repo_url: str | None = None,
+    name: str | None = None,
+) -> dict:
+    """Create and start a new container from a built image."""
+    tag = f"{IMAGE_PREFIX}/{image_name}:latest"
+
+    if not _image_is_built(image_name):
+        raise ValueError(f"Image '{image_name}' is not built. Build it first.")
+
+    if not name:
+        name = f"docker-launcher-{uuid.uuid4().hex[:8]}"
+
+    if repo_url:
+        repo_name = repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+        workspace_dir = f"/workspaces/{repo_name}"
+    else:
+        workspace_dir = "/workspaces"
+
+    mounts = [
+        docker.types.Mount(
+            target="/home/node/.claude",
+            source=f"{name}-claude-config",
+            type="volume",
+        ),
+        docker.types.Mount(
+            target="/commandhistory",
+            source=f"{name}-history",
+            type="volume",
+        ),
+    ]
+
+    # Mount host gh CLI config so git/gh can authenticate inside the container
+    gh_config = _gh_config_host_dir()
+    if gh_config.is_dir():
+        mounts.append(
+            docker.types.Mount(
+                target="/home/node/.config/gh",
+                source=str(gh_config),
+                type="bind",
+                read_only=True,
+            )
+        )
+
+    labels = {
+        CONTAINER_LABEL: "true",
+        f"{CONTAINER_LABEL}.image": image_name,
+        f"{CONTAINER_LABEL}.repo": repo_url or "",
+        f"{CONTAINER_LABEL}.created": datetime.now(timezone.utc).isoformat(),
+        f"{CONTAINER_LABEL}.workspace": workspace_dir,
+    }
+
+    container = _get_client().containers.create(
+        image=tag,
+        name=name,
+        command="sleep infinity",
+        user="node",
+        working_dir="/workspaces",
+        environment=CONTAINER_ENV,
+        mounts=mounts,
+        labels=labels,
+        detach=True,
+    )
+
+    container.start()
+
+    # Inject host gh token so git clone can authenticate inside the container.
+    # Windows gh stores tokens in Credential Manager, not in hosts.yml,
+    # so bind-mounting the config alone isn't enough.
+    gh_token = _get_gh_token()
+    if gh_token:
+        safe_token = shlex.quote(gh_token)
+        cred_exit, cred_out = container.exec_run(
+            [
+                "bash",
+                "-c",
+                f"echo https://x-access-token:{safe_token}@github.com > /home/node/.git-credentials"
+                " && git config --global credential.helper 'store'",
+            ],
+            user="node",
+        )
+        if cred_exit != 0:
+            logger.warning(
+                "Git credential setup failed (exit %d): %s",
+                cred_exit,
+                cred_out.decode("utf-8", errors="replace") if cred_out else "",
+            )
+
+    warnings: list[str] = []
+
+    if repo_url:
+        exit_code, output = container.exec_run(
+            ["git", "clone", repo_url, workspace_dir],
+            user="node",
+        )
+        if exit_code != 0:
+            msg = (
+                output.decode("utf-8", errors="replace") if output else "unknown error"
+            )
+            logger.error("git clone failed (exit %d): %s", exit_code, msg)
+            warnings.append(f"Git clone failed: {msg.strip()}")
+
+    container.exec_run(
+        ["/usr/local/bin/devcontainer-start.sh"],
+        workdir=workspace_dir,
+        user="node",
+        detach=True,
+    )
+
+    container.reload()
+    info = _container_info(container)
+    if warnings:
+        info["warnings"] = warnings
+    return info
+
+
+def start_container(container_id: str) -> dict:
+    """Start a stopped container."""
+    try:
+        container = _get_client().containers.get(container_id)
+    except docker.errors.NotFound as e:
+        raise ValueError(f"Container '{container_id}' not found") from e
+    try:
+        container.start()
+    except docker.errors.APIError as e:
+        raise ValueError(f"Failed to start container: {e.explanation or e}") from e
+    container.reload()
+    return _container_info(container)
+
+
+def stop_container(container_id: str) -> dict:
+    """Stop a running container."""
+    try:
+        container = _get_client().containers.get(container_id)
+    except docker.errors.NotFound as e:
+        raise ValueError(f"Container '{container_id}' not found") from e
+    try:
+        container.stop()
+    except docker.errors.APIError as e:
+        raise ValueError(f"Failed to stop container: {e.explanation or e}") from e
+    container.reload()
+    return _container_info(container)
+
+
+def delete_container(container_id: str) -> dict:
+    """Delete a container and its associated volumes."""
+    try:
+        container = _get_client().containers.get(container_id)
+    except docker.errors.NotFound as e:
+        raise ValueError(f"Container '{container_id}' not found") from e
+
+    info = _container_info(container)
+    container_name = container.name
+
+    try:
+        container.remove(force=True)
+    except docker.errors.APIError as e:
+        raise ValueError(f"Failed to delete container: {e.explanation or e}") from e
+    delete_metadata(info["full_id"])
+
+    # Clean up named volumes
+    for suffix in ("claude-config", "history"):
+        vol_name = f"{container_name}-{suffix}"
+        try:
+            vol = _get_client().volumes.get(vol_name)
+            vol.remove()
+        except docker.errors.NotFound:
+            pass
+
+    return info
+
+
+def open_in_vscode(container_id: str) -> dict:
+    """Open VS Code in a new window attached to a container."""
+    try:
+        container = _get_client().containers.get(container_id)
+    except docker.errors.NotFound as e:
+        raise ValueError(f"Container '{container_id}' not found") from e
+
+    cid = container.id or ""
+    hex_id = cid.encode().hex()
+    workspace = (container.labels or {}).get(
+        f"{CONTAINER_LABEL}.workspace", "/workspaces"
+    )
+    uri = f"vscode-remote://attached-container+{hex_id}{workspace}"
+
+    if not shutil.which("code"):
+        raise ValueError("VS Code ('code') not found on PATH")
+
+    update_last_opened(cid)
+
+    subprocess.Popen(
+        ["code", "--new-window", "--folder-uri", uri],
+    )
+
+    return {"status": "opened"}
