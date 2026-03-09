@@ -58,7 +58,11 @@ async def docker_not_available_handler(request: Request, exc: DockerNotAvailable
 
 @app.get("/api/version")
 async def api_version():
-    return {"version": version("docker-launcher")}
+    try:
+        v = version("docker-launcher")
+    except Exception:
+        v = "dev"
+    return {"version": v}
 
 
 # --- Images ---

@@ -167,6 +167,7 @@ def _read_metadata(image_dir: Path) -> dict | None:
         with open(metadata_path, encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError):
+        logger.warning("Could not read %s", metadata_path, exc_info=True)
         return None
 
 
@@ -403,7 +404,7 @@ def create_container(
     gh_token = _get_gh_token()
     if gh_token:
         safe_token = shlex.quote(gh_token)
-        container.exec_run(
+        cred_exit, cred_out = container.exec_run(
             [
                 "bash",
                 "-c",
@@ -412,6 +413,12 @@ def create_container(
             ],
             user="node",
         )
+        if cred_exit != 0:
+            logger.warning(
+                "Git credential setup failed (exit %d): %s",
+                cred_exit,
+                cred_out.decode("utf-8", errors="replace") if cred_out else "",
+            )
 
     warnings: list[str] = []
 
@@ -445,12 +452,12 @@ def start_container(container_id: str) -> dict:
     """Start a stopped container."""
     try:
         container = _get_client().containers.get(container_id)
-    except docker.errors.NotFound:
-        raise ValueError(f"Container '{container_id}' not found")
+    except docker.errors.NotFound as e:
+        raise ValueError(f"Container '{container_id}' not found") from e
     try:
         container.start()
     except docker.errors.APIError as e:
-        raise ValueError(f"Failed to start container: {e.explanation or e}")
+        raise ValueError(f"Failed to start container: {e.explanation or e}") from e
     container.reload()
     return _container_info(container)
 
@@ -459,12 +466,12 @@ def stop_container(container_id: str) -> dict:
     """Stop a running container."""
     try:
         container = _get_client().containers.get(container_id)
-    except docker.errors.NotFound:
-        raise ValueError(f"Container '{container_id}' not found")
+    except docker.errors.NotFound as e:
+        raise ValueError(f"Container '{container_id}' not found") from e
     try:
         container.stop()
     except docker.errors.APIError as e:
-        raise ValueError(f"Failed to stop container: {e.explanation or e}")
+        raise ValueError(f"Failed to stop container: {e.explanation or e}") from e
     container.reload()
     return _container_info(container)
 
@@ -473,8 +480,8 @@ def delete_container(container_id: str) -> dict:
     """Delete a container and its associated volumes."""
     try:
         container = _get_client().containers.get(container_id)
-    except docker.errors.NotFound:
-        raise ValueError(f"Container '{container_id}' not found")
+    except docker.errors.NotFound as e:
+        raise ValueError(f"Container '{container_id}' not found") from e
 
     info = _container_info(container)
     container_name = container.name
@@ -482,7 +489,7 @@ def delete_container(container_id: str) -> dict:
     try:
         container.remove(force=True)
     except docker.errors.APIError as e:
-        raise ValueError(f"Failed to delete container: {e.explanation or e}")
+        raise ValueError(f"Failed to delete container: {e.explanation or e}") from e
     delete_metadata(info["full_id"])
 
     # Clean up named volumes
@@ -501,8 +508,8 @@ def open_in_vscode(container_id: str) -> dict:
     """Open VS Code in a new window attached to a container."""
     try:
         container = _get_client().containers.get(container_id)
-    except docker.errors.NotFound:
-        raise ValueError(f"Container '{container_id}' not found")
+    except docker.errors.NotFound as e:
+        raise ValueError(f"Container '{container_id}' not found") from e
 
     cid = container.id or ""
     hex_id = cid.encode().hex()
@@ -518,7 +525,6 @@ def open_in_vscode(container_id: str) -> dict:
 
     subprocess.Popen(
         ["code", "--new-window", "--folder-uri", uri],
-        shell=True,
     )
 
     return {"status": "opened"}

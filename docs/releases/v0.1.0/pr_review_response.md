@@ -2,14 +2,27 @@
 
 ## Fixes Applied
 
-| # | Original Issue | Resolution | Commit |
-|---|---------------|------------|--------|
-| 1 | [Critical] Frontend sends `img.name` instead of `img.id` to backend — builds/creates fail | Changed `img.name` to `img.id` in build button `data-build-image`, select `<option value>`, and image lookup comparison | dcfd09e |
-| 2 | [Critical] SSE streaming endpoints have no error handling — broken stream on error | Added try/except around all 3 SSE generators (build, install-gh, gh-login) that yield `ERROR:` events; added pre-flight image validation for build endpoint | dcfd09e |
-| 3 | [High] `except Exception` leaks Docker internals via `str(e)` | Replaced `str(e)` with generic `"Container creation failed"` message; detailed error remains in log | dcfd09e |
-| 4 | [High] Git clone failure silently swallowed — API returns 200 with empty workspace | Added `warnings` field to response when clone fails so frontend can display it | dcfd09e |
-| 5 | [High] Non-atomic JSON writes + corrupt JSON silently returns empty | `_save()` now writes to temp file then `os.replace()` atomically; `_load()` logs warnings on corrupt/unreadable JSON | dcfd09e |
-| 6 | [High] Dockerfile SNIPPET for bash history defined but never appended to .bashrc | Added `echo "$SNIPPET" >> /home/$USERNAME/.bashrc` to the RUN instruction | dcfd09e |
+| # | Original Issue | Resolution |
+|---|---------------|------------|
+| 1 | [Critical] Frontend sends `img.name` instead of `img.id` to backend — builds/creates fail | Changed `img.name` to `img.id` in build button, select option value, and image lookup |
+| 2 | [Critical] SSE streaming endpoints have no error handling — broken stream on error | Added try/except around all 3 SSE generators; yield `ERROR:` events; pre-flight image validation for build |
+| 3 | [High] `except Exception` leaks Docker internals via `str(e)` | Generic `"Container creation failed"` message; detailed error in log only |
+| 4 | [High] Git clone failure silently swallowed — API returns 200 with empty workspace | Added `warnings` field to response when clone fails |
+| 5 | [High] Non-atomic JSON writes + corrupt JSON silently returns empty | Atomic writes via temp file + `os.replace()`; `_load()` logs warnings on corrupt JSON |
+| 6 | [High] Dockerfile SNIPPET for bash history never appended to .bashrc | Append SNIPPET to `/home/$USERNAME/.bashrc` |
+| 7 | [High] `subprocess.Popen` with `shell=True` and list argument for VS Code launch | Removed `shell=True` |
+| 8 | [Medium] `raise ValueError(...)` missing `from e` in 4 except blocks | Added `from e` to all `raise ValueError` in start/stop/delete/vscode |
+| 9 | [Medium] `_read_metadata` silently returns `None` on corrupt metadata.json | Added `logger.warning()` with exc_info |
+| 10 | [Medium] Git credentials `exec_run` exit code discarded | Check exit code and log warning on failure |
+| 11 | [Medium] `PackageNotFoundError` unhandled in version endpoint | try/except with `"dev"` fallback |
+
+## Written Off
+
+| # | Original Issue | Reason |
+|---|---------------|--------|
+| 12 | [Medium] `devcontainer-start.sh` exec_run result discarded | Runs with `detach=True` — no exit code available by design |
+| 13 | [Medium] VS Code `Popen` result never checked | Fire-and-forget by design; `shutil.which` already guards |
+| 14 | [Medium] Race condition on global `_client` | Worst case is redundant client creation; no data corruption risk |
 
 ## Re-run Results
 
