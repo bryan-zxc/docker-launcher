@@ -1,8 +1,13 @@
 """JSON metadata store for container history."""
 
 import json
+import logging
+import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 DATA_FILE = Path.home() / ".docker-launcher" / "containers.json"
 
@@ -13,14 +18,24 @@ def _load() -> dict:
     try:
         with open(DATA_FILE, encoding="utf-8") as f:
             return json.load(f)
-    except (json.JSONDecodeError, OSError):
+    except json.JSONDecodeError:
+        logger.warning("Corrupt containers.json — returning empty store")
+        return {}
+    except OSError:
+        logger.warning("Could not read containers.json", exc_info=True)
         return {}
 
 
 def _save(data: dict) -> None:
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    fd, tmp_path = tempfile.mkstemp(dir=DATA_FILE.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp_path, DATA_FILE)
+    except BaseException:
+        os.unlink(tmp_path)
+        raise
 
 
 def update_last_opened(container_id: str) -> None:

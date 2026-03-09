@@ -79,9 +79,16 @@ async def api_get_image(name: str):
 
 @app.post("/api/images/{name}/build")
 async def api_build_image(name: str, force: bool = False):
+    image = get_image(name)
+    if image is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+
     def stream():
-        for line in build_image(name, force=force):
-            yield f"data: {line}\n\n"
+        try:
+            for line in build_image(name, force=force):
+                yield f"data: {line}\n\n"
+        except Exception as e:
+            yield f"data: ERROR: {e}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 
@@ -106,11 +113,11 @@ async def api_create_container(req: CreateContainerRequest):
         return create_container(req.image, req.repo_url, req.name)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
         import logging
 
         logging.getLogger(__name__).exception("Container creation failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Container creation failed")
 
 
 @app.post("/api/containers/{container_id}/start")
@@ -156,8 +163,11 @@ async def api_prerequisites():
 @app.post("/api/prerequisites/install-gh")
 async def api_install_gh():
     def stream():
-        for line in install_gh():
-            yield f"data: {line}\n\n"
+        try:
+            for line in install_gh():
+                yield f"data: {line}\n\n"
+        except Exception as e:
+            yield f"data: ERROR: {e}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream; charset=utf-8")
 
@@ -165,8 +175,11 @@ async def api_install_gh():
 @app.post("/api/prerequisites/gh-login")
 async def api_gh_login():
     def stream():
-        for line in gh_login():
-            yield f"data: {line}\n\n"
+        try:
+            for line in gh_login():
+                yield f"data: {line}\n\n"
+        except Exception as e:
+            yield f"data: ERROR: {e}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream; charset=utf-8")
 

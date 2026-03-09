@@ -1665,7 +1665,7 @@ html.light .confirm-dialog {
 
       var btnClass = img.needs_rebuild ? 'btn-warning' : 'btn-primary';
       var btnLabel = img.needs_rebuild ? 'Rebuild' : (img.built ? 'Rebuild' : 'Build');
-      html += '<button class="btn btn-sm ' + btnClass + '" data-build-image="' + esc(img.name) + '">' +
+      html += '<button class="btn btn-sm ' + btnClass + '" data-build-image="' + esc(img.id) + '">' +
         '<span class="material-symbols-outlined">refresh</span>' + btnLabel + '</button>';
 
       html += '</div></div>';
@@ -1816,7 +1816,7 @@ html.light .confirm-dialog {
       for (var i = 0; i < images.length; i++) {
         var img = images[i];
         var desc = img.description ? ' \u2014 ' + img.description : '';
-        html += '<option value="' + esc(img.name) + '">' + esc(img.name) + esc(desc) + '</option>';
+        html += '<option value="' + esc(img.id) + '">' + esc(img.name) + esc(desc) + '</option>';
       }
     }
     $createImage.innerHTML = html;
@@ -1843,7 +1843,7 @@ html.light .confirm-dialog {
     // Check if image needs building
     var image = null;
     for (var i = 0; i < state.images.length; i++) {
-      if (state.images[i].name === imageName) {
+      if (state.images[i].id === imageName) {
         image = state.images[i];
         break;
       }

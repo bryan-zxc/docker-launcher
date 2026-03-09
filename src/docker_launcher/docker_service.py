@@ -413,6 +413,8 @@ def create_container(
             user="node",
         )
 
+    warnings: list[str] = []
+
     if repo_url:
         exit_code, output = container.exec_run(
             ["git", "clone", repo_url, workspace_dir],
@@ -423,6 +425,7 @@ def create_container(
                 output.decode("utf-8", errors="replace") if output else "unknown error"
             )
             logger.error("git clone failed (exit %d): %s", exit_code, msg)
+            warnings.append(f"Git clone failed: {msg.strip()}")
 
     container.exec_run(
         ["/usr/local/bin/devcontainer-start.sh"],
@@ -432,7 +435,10 @@ def create_container(
     )
 
     container.reload()
-    return _container_info(container)
+    info = _container_info(container)
+    if warnings:
+        info["warnings"] = warnings
+    return info
 
 
 def start_container(container_id: str) -> dict:

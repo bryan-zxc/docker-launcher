@@ -38,7 +38,8 @@ ARG USERNAME=node
 RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
   && mkdir /commandhistory \
   && touch /commandhistory/.bash_history \
-  && chown -R $USERNAME /commandhistory
+  && chown -R $USERNAME /commandhistory \
+  && echo "$SNIPPET" >> /home/$USERNAME/.bashrc
 
 # Fix locale warnings
 RUN apt-get update && apt-get install -y --no-install-recommends locales && \
