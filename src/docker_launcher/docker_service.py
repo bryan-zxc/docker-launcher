@@ -3,7 +3,6 @@
 import hashlib
 import json
 import logging
-import os
 import shlex
 import shutil
 import subprocess
@@ -32,12 +31,6 @@ IMAGES_DIR = _BASE_DIR / "images"
 
 logger = logging.getLogger(__name__)
 
-
-def _gh_config_host_dir() -> Path:
-    """Return the gh CLI config directory on the host."""
-    if sys.platform == "win32":
-        return Path(os.environ.get("APPDATA", "")) / "GitHub CLI"
-    return Path.home() / ".config" / "gh"  # type: ignore[unreachable]
 
 
 def _get_gh_token() -> str | None:
@@ -364,17 +357,9 @@ def create_container(
         ),
     ]
 
-    # Mount host gh CLI config so git/gh can authenticate inside the container
-    gh_config = _gh_config_host_dir()
-    if gh_config.is_dir():
-        mounts.append(
-            docker.types.Mount(
-                target="/home/node/.config/gh",
-                source=str(gh_config),
-                type="bind",
-                read_only=True,
-            )
-        )
+    # gh CLI auth is injected after container start (see below)
+    # rather than bind-mounting the host config, which is read-only
+    # and doesn't contain tokens on Windows (stored in Credential Manager).
 
     labels = {
         CONTAINER_LABEL: "true",
@@ -398,9 +383,10 @@ def create_container(
 
     container.start()
 
-    # Inject host gh token so git clone can authenticate inside the container.
-    # Windows gh stores tokens in Credential Manager, not in hosts.yml,
-    # so bind-mounting the config alone isn't enough.
+    # Inject host gh token so both git and gh CLI authenticate inside
+    # the container.  Windows gh stores tokens in Credential Manager,
+    # not in hosts.yml, so we extract the token on the host and write
+    # both .git-credentials (for git) and hosts.yml (for gh).
     gh_token = _get_gh_token()
     if gh_token:
         safe_token = shlex.quote(gh_token)
@@ -409,13 +395,16 @@ def create_container(
                 "bash",
                 "-c",
                 f"echo https://x-access-token:{safe_token}@github.com > /home/node/.git-credentials"
-                " && git config --global credential.helper 'store'",
+                " && git config --global credential.helper 'store'"
+                " && mkdir -p /home/node/.config/gh"
+                f" && printf 'github.com:\\n  oauth_token: %s\\n  user: \\n  git_protocol: https\\n' {safe_token}"
+                " > /home/node/.config/gh/hosts.yml",
             ],
             user="node",
         )
         if cred_exit != 0:
             logger.warning(
-                "Git credential setup failed (exit %d): %s",
+                "Credential setup failed (exit %d): %s",
                 cred_exit,
                 cred_out.decode("utf-8", errors="replace") if cred_out else "",
             )

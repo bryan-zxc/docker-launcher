@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4] - 2026-03-10
+
+### Fixed
+
+- gh CLI auth inside containers no longer fails with read-only filesystem
+- Container gh credentials now written directly instead of read-only bind mount from host
+
 ## [0.1.3] - 2026-03-10
 
 ### Fixed
