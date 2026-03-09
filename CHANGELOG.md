@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1] - 2026-03-10
+
+### Fixed
+
+- CI release workflow now has `permissions: contents: write` so it can create GitHub Releases
+
 ## [0.1.0] - 2026-03-09
 
 ### Added
