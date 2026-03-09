@@ -27,7 +27,12 @@
       "Bash(powershell:*)",
       "Bash(claude:*)",
       "Read(//c/Users/zhye/.docker-launcher/**)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(gh release:*)",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli open:*)",
+      "Bash(playwright-cli snapshot:*)",
+      "Bash(playwright-cli reload:*)",
+      "Bash(playwright-cli screenshot:*)"
     ]
   }
 }

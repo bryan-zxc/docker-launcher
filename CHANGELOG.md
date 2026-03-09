@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3] - 2026-03-10
+
+### Fixed
+
+- VS Code launch now works on Windows (restored shell=True for code.cmd execution)
+- gh CLI install via winget no longer reports "already installed" as an error
+
 ## [0.1.2] - 2026-03-10
 
 ### Fixed

@@ -82,10 +82,11 @@ def install_gh() -> Generator[str, None, None]:
         yield line
 
     rc = proc.wait()
-    if rc != 0:
-        yield f"ERROR: Installation failed with exit code {rc}"
-    else:
+    # winget exit 0x8A15002B = package already installed
+    if rc == 0 or rc == -1978335189 or rc == 2316632107:
         yield "GitHub CLI installed successfully"
+    else:
+        yield f"ERROR: Installation failed with exit code {rc}"
 
 
 def gh_login() -> Generator[str, None, None]:

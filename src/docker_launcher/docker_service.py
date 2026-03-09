@@ -524,7 +524,8 @@ def open_in_vscode(container_id: str) -> dict:
     update_last_opened(cid)
 
     subprocess.Popen(
-        ["code", "--new-window", "--folder-uri", uri],
+        f'code --new-window --folder-uri "{uri}"',
+        shell=True,
     )
 
     return {"status": "opened"}
