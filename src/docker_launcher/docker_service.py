@@ -49,6 +49,33 @@ def _get_gh_token() -> str | None:
     return None
 
 
+def _get_claude_oauth_token() -> str | None:
+    """Resolve the Claude Code OAuth token.
+
+    Priority:
+      1. Host env var CLAUDE_CODE_OAUTH_TOKEN (power-user override)
+      2. Build-time default baked into the exe by CI
+      3. None (container will require interactive login)
+    """
+    import os
+
+    token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+    if token:
+        return token
+
+    try:
+        from docker_launcher._auth_defaults import (
+            CLAUDE_CODE_OAUTH_TOKEN,
+        )
+
+        if CLAUDE_CODE_OAUTH_TOKEN:
+            return CLAUDE_CODE_OAUTH_TOKEN
+    except ImportError:
+        pass
+
+    return None
+
+
 IMAGE_PREFIX = "docker-launcher"
 CONTAINER_LABEL = "docker-launcher"
 
@@ -361,6 +388,12 @@ def create_container(
     # rather than bind-mounting the host config, which is read-only
     # and doesn't contain tokens on Windows (stored in Credential Manager).
 
+    env = dict(CONTAINER_ENV)
+    claude_token = _get_claude_oauth_token()
+    if claude_token:
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = claude_token
+        logger.info("Claude Code OAuth token will be injected into container %s", name)
+
     labels = {
         CONTAINER_LABEL: "true",
         f"{CONTAINER_LABEL}.image": image_name,
@@ -375,7 +408,7 @@ def create_container(
         command="sleep infinity",
         user="node",
         working_dir="/workspaces",
-        environment=CONTAINER_ENV,
+        environment=env,
         mounts=mounts,
         labels=labels,
         detach=True,
@@ -410,6 +443,11 @@ def create_container(
             )
 
     warnings: list[str] = []
+
+    if not claude_token:
+        warnings.append(
+            "No Claude Code OAuth token available — interactive login will be required."
+        )
 
     if repo_url:
         exit_code, output = container.exec_run(
