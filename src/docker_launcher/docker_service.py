@@ -366,6 +366,10 @@ def create_container(
 
     if repo_url:
         repo_name = repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+        # Sanitise repo_name: keep only alphanumeric, hyphen, underscore, dot
+        repo_name = "".join(c for c in repo_name if c.isalnum() or c in "-_.")
+        if not repo_name:
+            repo_name = "repo"
         workspace_dir = f"/workspaces/{repo_name}"
     else:
         workspace_dir = "/workspaces"
@@ -465,11 +469,12 @@ def create_container(
 
     # Seed project templates into workspace (skills, CLAUDE.md, pyproject.toml)
     if repo_url and clone_succeeded:
+        safe_dir = shlex.quote(workspace_dir)
         seed_exit, seed_out = container.exec_run(
             [
                 "bash",
                 "-c",
-                f"cp -rn /opt/templates/. {workspace_dir}/ 2>/dev/null; true",
+                f"cp -rn /opt/templates/. {safe_dir}/ 2>&1",
             ],
             user="node",
         )
@@ -484,7 +489,7 @@ def create_container(
 
         # Install Python dependencies with uv
         uv_exit, uv_out = container.exec_run(
-            ["bash", "-c", f"cd {workspace_dir} && uv sync 2>&1"],
+            ["bash", "-c", f"cd {safe_dir} && uv sync 2>&1"],
             user="node",
         )
         if uv_exit != 0:
@@ -584,8 +589,7 @@ def open_in_vscode(container_id: str) -> dict:
     update_last_opened(cid)
 
     subprocess.Popen(
-        f'code --new-window --folder-uri "{uri}"',
-        shell=True,
+        ["code", "--new-window", "--folder-uri", uri],
     )
 
     return {"status": "opened"}

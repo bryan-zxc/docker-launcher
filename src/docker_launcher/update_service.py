@@ -44,6 +44,7 @@ def _current_version() -> str:
     try:
         return pkg_version("docker-launcher")
     except Exception:
+        logger.warning("Could not determine app version — update checks disabled")
         return "dev"
 
 
@@ -100,7 +101,7 @@ def _check_github_releases() -> dict | None:
         download_url = ""
         for asset in data.get("assets", []):
             if asset.get("name", "").endswith(".zip"):
-                download_url = asset["browser_download_url"]
+                download_url = asset.get("browser_download_url", "")
                 break
 
         if not tag or not download_url:
