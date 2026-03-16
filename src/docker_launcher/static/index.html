@@ -1694,6 +1694,7 @@ html.light .confirm-dialog {
   }
 
   $updateDownloadBtn.addEventListener('click', function() {
+    if (state.activeSSE) return;
     var info = state.updateInfo;
     if (!info) return;
     showUpdateDownloading(info);
