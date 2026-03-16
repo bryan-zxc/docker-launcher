@@ -2242,8 +2242,8 @@ html.light .confirm-dialog {
       }
     }
 
-    if (image && !image.built) {
-      // Auto-build the image first
+    if (image && (!image.built || image.needs_rebuild)) {
+      // Auto-build the image first (or rebuild if stale)
       buildImage(imageName, function(success) {
         if (success) {
           doCreateContainer(imageName, repoUrl, name);
