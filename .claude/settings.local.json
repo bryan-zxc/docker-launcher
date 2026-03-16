@@ -43,7 +43,8 @@
       "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli eval \"document.querySelectorAll\\('.scene-btn'\\)[3].click\\(\\)\")",
       "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli close)",
       "Bash(pkill:*)",
-      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli eval \"document.querySelectorAll\\('.scene-btn'\\)[1].click\\(\\)\")"
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli eval \"document.querySelectorAll\\('.scene-btn'\\)[1].click\\(\\)\")",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli goto http://localhost:8765/3-create-options.html)"
     ]
   }
 }
