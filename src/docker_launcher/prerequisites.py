@@ -1,10 +1,12 @@
-"""Prerequisite checks for container creation: gh CLI and auth."""
+"""Prerequisite checks for container creation: gh CLI, auth, and git identity."""
 
 import logging
 import re
 import subprocess
 import sys
 from typing import Generator
+
+from docker_launcher.database import get_git_identity
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,7 @@ def get_prerequisites() -> dict:
     return {
         "gh_installed": installed,
         "gh_authenticated": gh_authenticated() if installed else False,
+        "git_identity_configured": get_git_identity() is not None,
     }
 
 

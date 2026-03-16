@@ -7,7 +7,6 @@ import shlex
 import shutil
 import subprocess
 import sys
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
@@ -19,6 +18,7 @@ import docker.types
 from docker_launcher.database import (
     cleanup_orphans,
     delete_metadata,
+    get_git_identity,
     get_metadata,
     update_last_opened,
 )
@@ -40,6 +40,22 @@ def _get_gh_token() -> str | None:
             capture_output=True,
             text=True,
             timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def _get_gh_username() -> str | None:
+    """Get the authenticated GitHub username from the host's gh CLI."""
+    try:
+        result = subprocess.run(
+            ["gh", "api", "user", "--jq", ".login"],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
@@ -134,6 +150,18 @@ def _image_built_at(name: str) -> str | None:
         return img.attrs.get("Created", "")
     except docker.errors.ImageNotFound:
         return None
+
+
+def container_name_available(name: str) -> bool:
+    """Check if a container name is available (not already in use)."""
+    container_name = f"docker-launcher-{name}"
+    try:
+        _get_client().containers.get(container_name)
+        return False
+    except docker.errors.NotFound:
+        return True
+    except docker.errors.APIError:
+        return True
 
 
 def _image_is_built(name: str) -> bool:
@@ -358,44 +386,87 @@ def create_container(
     """Create and start a new container from a built image."""
     tag = f"{IMAGE_PREFIX}/{image_name}:latest"
 
+    git_identity = get_git_identity()
+    if not git_identity:
+        raise ValueError(
+            "Git identity not configured."
+            " Go to Prerequisites and set your name and email."
+        )
+
+    if _get_gh_token() is None:
+        raise ValueError("GitHub not authenticated. Go to Prerequisites and sign in.")
+
     if not _image_is_built(image_name):
         raise ValueError(f"Image '{image_name}' is not built. Build it first.")
 
+    # Derive name from repo URL if not provided (clone mode)
+    if not name and repo_url:
+        name = repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
     if not name:
-        name = f"docker-launcher-{uuid.uuid4().hex[:8]}"
+        raise ValueError("Project name is required.")
 
-    if repo_url:
-        repo_name = repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
-        # Sanitise repo_name: keep only alphanumeric, hyphen, underscore, dot
-        repo_name = "".join(c for c in repo_name if c.isalnum() or c in "-_.")
-        if not repo_name:
-            repo_name = "repo"
-        workspace_dir = f"/workspaces/{repo_name}"
-    else:
-        workspace_dir = "/workspaces"
+    # Sanitise name for use as container name and repo name
+    sanitised_name = "".join(c for c in name if c.isalnum() or c in "-_.")
+    if not sanitised_name:
+        sanitised_name = "project"
+
+    # If no repo_url, auto-create a private GitHub repo
+    auto_created_repo = False
+    if not repo_url:
+        gh_user = _get_gh_username()
+        if not gh_user:
+            raise ValueError(
+                "Could not determine GitHub username. Ensure gh is authenticated."
+            )
+
+        create_result = subprocess.run(
+            ["gh", "repo", "create", sanitised_name, "--private"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if create_result.returncode != 0:
+            err_msg = (
+                create_result.stderr.strip()
+                or create_result.stdout.strip()
+                or "Unknown error"
+            )
+            raise ValueError(f"Failed to create GitHub repo: {err_msg}")
+
+        repo_url = f"https://github.com/{gh_user}/{sanitised_name}.git"
+        auto_created_repo = True
+        logger.info("Auto-created GitHub repo: %s", repo_url)
+
+    # Derive workspace dir from repo URL
+    repo_name = repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+    repo_name = "".join(c for c in repo_name if c.isalnum() or c in "-_.")
+    if not repo_name:
+        repo_name = "repo"
+    workspace_dir = f"/workspaces/{repo_name}"
+
+    container_name = f"docker-launcher-{sanitised_name}"
 
     mounts = [
         docker.types.Mount(
             target="/home/node/.claude",
-            source=f"{name}-claude-config",
+            source=f"{container_name}-claude-config",
             type="volume",
         ),
         docker.types.Mount(
             target="/commandhistory",
-            source=f"{name}-history",
+            source=f"{container_name}-history",
             type="volume",
         ),
     ]
-
-    # gh CLI auth is injected after container start (see below)
-    # rather than bind-mounting the host config, which is read-only
-    # and doesn't contain tokens on Windows (stored in Credential Manager).
 
     env = dict(CONTAINER_ENV)
     claude_token = _get_claude_oauth_token()
     if claude_token:
         env["CLAUDE_CODE_OAUTH_TOKEN"] = claude_token
-        logger.info("Claude Code OAuth token will be injected into container %s", name)
+        logger.info(
+            "Claude Code OAuth token will be injected into container %s",
+            container_name,
+        )
 
     labels = {
         CONTAINER_LABEL: "true",
@@ -405,24 +476,29 @@ def create_container(
         f"{CONTAINER_LABEL}.workspace": workspace_dir,
     }
 
-    container = _get_client().containers.create(
-        image=tag,
-        name=name,
-        command="sleep infinity",
-        user="node",
-        working_dir="/workspaces",
-        environment=env,
-        mounts=mounts,
-        labels=labels,
-        detach=True,
-    )
+    try:
+        container = _get_client().containers.create(
+            image=tag,
+            name=container_name,
+            command="sleep infinity",
+            user="node",
+            working_dir="/workspaces",
+            environment=env,
+            mounts=mounts,
+            labels=labels,
+            detach=True,
+        )
+    except docker.errors.APIError as e:
+        if e.status_code == 409:
+            raise ValueError(
+                f"A container named '{container_name}' already exists."
+                " Delete it first or use a different name."
+            ) from e
+        raise
 
     container.start()
 
-    # Inject host gh token so both git and gh CLI authenticate inside
-    # the container.  Windows gh stores tokens in Credential Manager,
-    # not in hosts.yml, so we extract the token on the host and write
-    # both .git-credentials (for git) and hosts.yml (for gh).
+    # Inject host gh token for git and gh CLI authentication
     gh_token = _get_gh_token()
     if gh_token:
         safe_token = shlex.quote(gh_token)
@@ -445,6 +521,20 @@ def create_container(
                 cred_out.decode("utf-8", errors="replace") if cred_out else "",
             )
 
+    # Inject git identity
+    git_name, git_email = git_identity
+    safe_git_name = shlex.quote(git_name)
+    safe_git_email = shlex.quote(git_email)
+    container.exec_run(
+        [
+            "bash",
+            "-c",
+            f"git config --global user.name {safe_git_name}"
+            f" && git config --global user.email {safe_git_email}",
+        ],
+        user="node",
+    )
+
     warnings: list[str] = []
 
     if not claude_token:
@@ -452,23 +542,21 @@ def create_container(
             "No Claude Code OAuth token available — interactive login will be required."
         )
 
+    # Clone repo
     clone_succeeded = False
-    if repo_url:
-        exit_code, output = container.exec_run(
-            ["git", "clone", repo_url, workspace_dir],
-            user="node",
-        )
-        if exit_code != 0:
-            msg = (
-                output.decode("utf-8", errors="replace") if output else "unknown error"
-            )
-            logger.error("git clone failed (exit %d): %s", exit_code, msg)
-            warnings.append(f"Git clone failed: {msg.strip()}")
-        else:
-            clone_succeeded = True
+    exit_code, output = container.exec_run(
+        ["git", "clone", repo_url, workspace_dir],
+        user="node",
+    )
+    if exit_code != 0:
+        msg = output.decode("utf-8", errors="replace") if output else "unknown error"
+        logger.error("git clone failed (exit %d): %s", exit_code, msg)
+        warnings.append(f"Git clone failed: {msg.strip()}")
+    else:
+        clone_succeeded = True
 
     # Seed project templates into workspace (skills, CLAUDE.md, pyproject.toml)
-    if repo_url and clone_succeeded:
+    if clone_succeeded:
         safe_dir = shlex.quote(workspace_dir)
         seed_exit, seed_out = container.exec_run(
             [
@@ -498,6 +586,29 @@ def create_container(
             )
             logger.warning("uv sync failed (exit %d): %s", uv_exit, msg)
             warnings.append(f"Python dependency install failed: {msg.strip()}")
+
+        # For auto-created repos: commit templates and push
+        if auto_created_repo:
+            commit_exit, commit_out = container.exec_run(
+                [
+                    "bash",
+                    "-c",
+                    f"cd {safe_dir} && git add -A"
+                    " && git commit -m 'Initial commit with project templates'"
+                    " && git push 2>&1",
+                ],
+                user="node",
+            )
+            if commit_exit != 0:
+                msg = (
+                    commit_out.decode("utf-8", errors="replace")
+                    if commit_out
+                    else "unknown error"
+                )
+                logger.warning(
+                    "Initial commit/push failed (exit %d): %s", commit_exit, msg
+                )
+                warnings.append(f"Initial commit/push failed: {msg.strip()}")
 
     container.exec_run(
         ["/usr/local/bin/devcontainer-start.sh"],

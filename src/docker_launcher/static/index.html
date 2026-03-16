@@ -530,16 +530,6 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
 }
 
-/* ===== Create Container Form ===== */
-.create-form {
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -892,7 +882,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 480px;
+  max-width: 540px;
 }
 
 .prereq-item {
@@ -949,6 +939,107 @@ body {
 .prereq-status.pass { color: var(--green); }
 .prereq-status.fail { color: var(--red); }
 
+/* ===== Prereq identity form ===== */
+.prereq-identity-form {
+  padding: 4px 0 12px 66px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.prereq-identity-form .form-group {
+  min-width: 140px;
+  flex: 1;
+}
+
+.prereq-identity-form .form-group input {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+/* ===== Create Container sub-page ===== */
+.create-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 680px;
+  margin-bottom: 24px;
+}
+
+.create-card {
+  background: var(--glass-bg);
+  border: 2px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 24px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.create-card:hover {
+  border-color: var(--glass-border-hover);
+}
+
+.create-card.selected {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan), 0 4px 20px rgba(0, 229, 255, 0.1);
+}
+
+.create-card .create-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  background: rgba(0, 170, 255, 0.1);
+  color: var(--blue);
+}
+
+.create-card .create-card-icon .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.create-card h4 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.create-card p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.create-card .form-group {
+  margin-bottom: 10px;
+}
+
+.name-status {
+  font-size: 0.78rem;
+  margin-top: 4px;
+  display: block;
+  min-height: 1.2em;
+}
+
+.name-status.available { color: var(--green); }
+.name-status.taken { color: var(--red); }
+.name-status.checking { color: var(--text-dim); }
+
+.create-bottom {
+  max-width: 680px;
+}
+
+.create-bottom .form-group {
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+
 /* ===== Settings page ===== */
 .settings-card {
   background: var(--glass-bg);
@@ -982,6 +1073,17 @@ body {
 .settings-card .settings-status {
   font-size: 0.82rem;
   color: var(--text-dim);
+}
+
+.settings-card .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.settings-card + .settings-card {
+  margin-top: 16px;
 }
 
 /* ===== Build Log Drawer ===== */
@@ -1218,10 +1320,11 @@ html.light .confirm-dialog {
 
 /* ===== Responsive tweaks ===== */
 @media (max-width: 900px) {
-  .create-form { flex-direction: column; align-items: stretch; }
   .form-group { min-width: unset; }
   .container-card { flex-wrap: wrap; }
   .container-actions { width: 100%; justify-content: flex-end; margin-top: 8px; }
+  .create-cards { grid-template-columns: 1fr; }
+  .prereq-identity-form { padding-left: 20px; flex-direction: column; align-items: stretch; }
 }
 </style>
 </head>
@@ -1301,13 +1404,65 @@ html.light .confirm-dialog {
 
     <!-- ===== Containers Page ===== -->
     <div class="page active" id="page-containers">
-      <div class="page-header">
-        <h2>Containers</h2>
-        <p>Create and manage your Docker development containers.</p>
+      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
+        <div>
+          <h2>Containers</h2>
+          <p>Create and manage your Docker development containers.</p>
+        </div>
+        <button class="btn btn-primary" id="showCreateBtn">
+          <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+          Create Container
+        </button>
       </div>
 
-      <!-- Create container form -->
-      <div class="card create-form" id="createForm">
+      <!-- Container list -->
+      <div class="container-list" id="containerList"></div>
+    </div>
+
+    <!-- ===== Create Container Sub-page ===== -->
+    <div class="page" id="page-create-container">
+      <div class="page-header">
+        <button class="btn btn-sm btn-ghost" id="createBackBtn" style="margin-bottom:16px;">
+          <span class="material-symbols-outlined" style="font-size:16px;">arrow_back</span>
+          Back to Containers
+        </button>
+        <h2>Create Container</h2>
+        <p>Choose how to set up your new development container.</p>
+      </div>
+
+      <div class="create-cards">
+        <div class="create-card selected" data-mode="new" id="createCardNew">
+          <div class="create-card-icon">
+            <span class="material-symbols-outlined">add_circle</span>
+          </div>
+          <h4>New Project</h4>
+          <p>Start with a fresh development environment.</p>
+          <div class="form-group">
+            <label>Project Name</label>
+            <input type="text" id="newProjectName" placeholder="my-project">
+            <span class="name-status" id="newProjectNameStatus"></span>
+          </div>
+        </div>
+
+        <div class="create-card" data-mode="clone" id="createCardClone">
+          <div class="create-card-icon">
+            <span class="material-symbols-outlined">content_copy</span>
+          </div>
+          <h4>Clone Existing Repo</h4>
+          <p>Clone a GitHub repository into a container.</p>
+          <div class="form-group" id="cloneRepoGroup" style="display:none;">
+            <label>Repository URL</label>
+            <input type="text" id="cloneRepoUrl" placeholder="https://github.com/user/repo">
+          </div>
+          <div class="form-group" id="cloneNameGroup" style="display:none;">
+            <label>Container Name (optional)</label>
+            <input type="text" id="cloneName" placeholder="my-project">
+            <span class="name-status" id="cloneNameStatus"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="create-bottom">
         <div class="form-group">
           <label>Image</label>
           <div class="select-wrapper">
@@ -1316,22 +1471,11 @@ html.light .confirm-dialog {
             </select>
           </div>
         </div>
-        <div class="form-group" style="flex: 1.4;">
-          <label>Repository URL</label>
-          <input type="text" id="createRepoUrl" placeholder="https://github.com/user/repo">
-        </div>
-        <div class="form-group">
-          <label>Container Name</label>
-          <input type="text" id="createName" placeholder="my-project">
-        </div>
-        <button class="btn btn-primary" id="createBtn" style="margin-bottom: 1px;">
-          <span class="material-symbols-outlined">add</span>
-          Create
+        <button class="btn btn-primary" id="createContainerBtn">
+          <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+          Create Container
         </button>
       </div>
-
-      <!-- Container list -->
-      <div class="container-list" id="containerList"></div>
     </div>
 
     <!-- ===== Images Page ===== -->
@@ -1525,9 +1669,6 @@ html.light .confirm-dialog {
   var $imageList        = document.getElementById('imageList');
   var $prereqList       = document.getElementById('prereqList');
   var $createImage      = document.getElementById('createImage');
-  var $createRepoUrl    = document.getElementById('createRepoUrl');
-  var $createName       = document.getElementById('createName');
-  var $createBtn        = document.getElementById('createBtn');
   var $drawerOverlay    = document.getElementById('drawerOverlay');
   var $drawer           = document.getElementById('drawer');
   var $drawerTitle      = document.getElementById('drawerTitle');
@@ -2175,6 +2316,14 @@ html.light .confirm-dialog {
         failStatus: 'Not Connected',
         action: 'gh-login',
         actionLabel: 'Login'
+      },
+      {
+        key: 'git_identity_configured',
+        label: 'Git Identity',
+        passSubLabel: 'Name and email configured for commits',
+        failSubLabel: 'Name and email required for commits',
+        passStatus: 'Configured',
+        type: 'form'
       }
     ];
 
@@ -2194,6 +2343,22 @@ html.light .confirm-dialog {
 
       if (passed) {
         html += '<span class="prereq-status pass">' + esc(item.passStatus) + '</span>';
+      } else if (!passed && item.type === 'form') {
+        // Close the prereq-item div, then render form below
+        html += '</div>';
+        html += '<div class="prereq-identity-form">';
+        html += '<div class="form-group">';
+        html += '<label>Name</label>';
+        html += '<input type="text" id="prereqGitName" placeholder="Jane Smith">';
+        html += '</div>';
+        html += '<div class="form-group">';
+        html += '<label>Email</label>';
+        html += '<input type="email" id="prereqGitEmail" placeholder="jane@example.com">';
+        html += '</div>';
+        html += '<button class="btn btn-sm btn-primary" id="prereqSaveGitBtn">Save</button>';
+        html += '</div>';
+        // Don't close the div again below — we already closed the prereq-item
+        continue;
       } else {
         html += '<button class="btn btn-sm btn-primary" data-prereq-action="' + esc(item.action) + '">' +
           '<span class="material-symbols-outlined">download</span>' + esc(item.actionLabel) + '</button>';
@@ -2203,6 +2368,36 @@ html.light .confirm-dialog {
     }
 
     $prereqList.innerHTML = html;
+
+    // If git identity form was rendered, wire up save and load existing values
+    var $prereqGitName = document.getElementById('prereqGitName');
+    var $prereqGitEmail = document.getElementById('prereqGitEmail');
+    var $prereqSaveGitBtn = document.getElementById('prereqSaveGitBtn');
+
+    if ($prereqSaveGitBtn) {
+      // Load existing settings values
+      api('GET', '/api/settings').then(function(data) {
+        if (data.git_name && $prereqGitName) $prereqGitName.value = data.git_name;
+        if (data.git_email && $prereqGitEmail) $prereqGitEmail.value = data.git_email;
+      }).catch(function() {});
+
+      $prereqSaveGitBtn.addEventListener('click', function() {
+        var name = $prereqGitName.value.trim();
+        var email = $prereqGitEmail.value.trim();
+        if (!name || !email) {
+          alert('Both name and email are required.');
+          return;
+        }
+        setButtonLoading($prereqSaveGitBtn, true);
+        api('POST', '/api/settings', { git_name: name, git_email: email }).then(function() {
+          fetchPrerequisites();
+        }).catch(function() {
+          alert('Failed to save git identity.');
+        }).finally(function() {
+          setButtonLoading($prereqSaveGitBtn, false);
+        });
+      });
+    }
   }
 
   // Prerequisites action delegation
@@ -2255,21 +2450,134 @@ html.light .confirm-dialog {
   }
 
   // =========================================================================
-  // Create container
+  // Create container sub-page
   // =========================================================================
 
-  $createBtn.addEventListener('click', function() {
-    var imageName = $createImage.value;
-    var repoUrl = $createRepoUrl.value.trim();
-    var name = $createName.value.trim();
+  var createMode = 'new';
+  var $showCreateBtn    = document.getElementById('showCreateBtn');
+  var $createBackBtn    = document.getElementById('createBackBtn');
+  var $createCardNew    = document.getElementById('createCardNew');
+  var $createCardClone  = document.getElementById('createCardClone');
+  var $newProjectName   = document.getElementById('newProjectName');
+  var $cloneRepoUrl     = document.getElementById('cloneRepoUrl');
+  var $cloneName        = document.getElementById('cloneName');
+  var $cloneRepoGroup   = document.getElementById('cloneRepoGroup');
+  var $cloneNameGroup   = document.getElementById('cloneNameGroup');
+  var $createContainerBtn = document.getElementById('createContainerBtn');
+  var $newProjectNameStatus = document.getElementById('newProjectNameStatus');
+  var $cloneNameStatus = document.getElementById('cloneNameStatus');
+  var nameCheckTimer = null;
+  var nameAvailable = true;
 
+  function checkNameAvailability(name, statusEl) {
+    statusEl.textContent = '';
+    statusEl.className = 'name-status';
+    nameAvailable = true;
+    if (!name) return;
+
+    // Sanitise same way as backend
+    var sanitised = name.replace(/[^a-zA-Z0-9._-]/g, '');
+    if (!sanitised) return;
+
+    statusEl.textContent = 'Checking...';
+    statusEl.className = 'name-status checking';
+
+    api('GET', '/api/containers/check-name/' + encodeURIComponent(sanitised)).then(function(data) {
+      if (data.available) {
+        statusEl.textContent = 'Name available';
+        statusEl.className = 'name-status available';
+        nameAvailable = true;
+      } else {
+        statusEl.textContent = 'Name already taken';
+        statusEl.className = 'name-status taken';
+        nameAvailable = false;
+      }
+    }).catch(function() {
+      statusEl.textContent = '';
+      statusEl.className = 'name-status';
+      nameAvailable = true;
+    });
+  }
+
+  function onNameInput(input, statusEl) {
+    clearTimeout(nameCheckTimer);
+    nameCheckTimer = setTimeout(function() {
+      checkNameAvailability(input.value.trim(), statusEl);
+    }, 400);
+  }
+
+  $newProjectName.addEventListener('input', function() {
+    onNameInput($newProjectName, $newProjectNameStatus);
+  });
+
+  $cloneName.addEventListener('input', function() {
+    onNameInput($cloneName, $cloneNameStatus);
+  });
+
+  function setCreateMode(mode) {
+    createMode = mode;
+    if (mode === 'new') {
+      $createCardNew.classList.add('selected');
+      $createCardClone.classList.remove('selected');
+      $newProjectName.parentElement.style.display = '';
+      $cloneRepoGroup.style.display = 'none';
+      $cloneNameGroup.style.display = 'none';
+    } else {
+      $createCardNew.classList.remove('selected');
+      $createCardClone.classList.add('selected');
+      $newProjectName.parentElement.style.display = 'none';
+      $cloneRepoGroup.style.display = '';
+      $cloneNameGroup.style.display = '';
+    }
+  }
+
+  $createCardNew.addEventListener('click', function() { setCreateMode('new'); });
+  $createCardClone.addEventListener('click', function() { setCreateMode('clone'); });
+
+  $showCreateBtn.addEventListener('click', function() {
+    var p = state.prerequisites;
+    if (!p || !p.gh_installed || !p.gh_authenticated || !p.git_identity_configured) {
+      alert('Please complete all prerequisites before creating a container.');
+      navigate('prerequisites');
+      return;
+    }
+    navigate('create-container');
+  });
+
+  $createBackBtn.addEventListener('click', function() {
+    navigate('containers');
+  });
+
+  $createContainerBtn.addEventListener('click', function() {
+    if (!nameAvailable) {
+      alert('Container name is already taken. Choose a different name.');
+      return;
+    }
+
+    var imageName = $createImage.value;
     if (!imageName) {
       alert('Please select an image.');
       return;
     }
-    if (!repoUrl) {
-      alert('Please enter a repository URL.');
-      return;
+
+    var body = { image: imageName };
+
+    if (createMode === 'new') {
+      var projName = $newProjectName.value.trim();
+      if (!projName) {
+        alert('Please enter a project name.');
+        return;
+      }
+      body.name = projName;
+    } else {
+      var repoUrl = $cloneRepoUrl.value.trim();
+      if (!repoUrl) {
+        alert('Please enter a repository URL.');
+        return;
+      }
+      body.repo_url = repoUrl;
+      var cName = $cloneName.value.trim();
+      if (cName) body.name = cName;
     }
 
     // Check if image needs building
@@ -2282,31 +2590,31 @@ html.light .confirm-dialog {
     }
 
     if (image && (!image.built || image.needs_rebuild)) {
-      // Auto-build the image first (or rebuild if stale)
       buildImage(imageName, function(success) {
         if (success) {
-          doCreateContainer(imageName, repoUrl, name);
+          doCreateContainer(body);
         }
       });
       return;
     }
 
-    doCreateContainer(imageName, repoUrl, name);
+    doCreateContainer(body);
   });
 
-  function doCreateContainer(imageName, repoUrl, name) {
-    setButtonLoading($createBtn, true);
-    var body = { image: imageName, repo_url: repoUrl };
-    if (name) body.name = name;
+  function doCreateContainer(body) {
+    setButtonLoading($createContainerBtn, true);
 
     api('POST', '/api/containers', body).then(function() {
-      $createRepoUrl.value = '';
-      $createName.value = '';
+      // Reset form fields
+      $newProjectName.value = '';
+      $cloneRepoUrl.value = '';
+      $cloneName.value = '';
+      navigate('containers');
       fetchContainers();
     }).catch(function(err) {
       alert('Failed to create container: ' + (err.detail || 'Unknown error'));
     }).finally(function() {
-      setButtonLoading($createBtn, false);
+      setButtonLoading($createContainerBtn, false);
     });
   }
 

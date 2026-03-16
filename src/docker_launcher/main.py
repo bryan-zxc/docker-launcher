@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from pydantic import BaseModel
 
+from docker_launcher.database import get_settings, save_settings
 from docker_launcher.prerequisites import (
     get_prerequisites,
     install_gh,
@@ -26,6 +27,7 @@ from docker_launcher.docker_service import (
     get_image,
     build_image,
     list_containers,
+    container_name_available,
     create_container,
     start_container,
     stop_container,
@@ -119,6 +121,11 @@ async def api_list_containers():
     return list_containers()
 
 
+@app.get("/api/containers/check-name/{name}")
+async def api_check_container_name(name: str):
+    return {"available": container_name_available(name)}
+
+
 @app.post("/api/containers")
 async def api_create_container(req: CreateContainerRequest):
     try:
@@ -194,6 +201,20 @@ async def api_gh_login():
             yield f"data: ERROR: {e}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream; charset=utf-8")
+
+
+# --- Settings ---
+
+
+@app.get("/api/settings")
+async def api_get_settings():
+    return get_settings()
+
+
+@app.post("/api/settings")
+async def api_save_settings(request: Request):
+    body = await request.json()
+    return save_settings(body)
 
 
 # --- Updates ---

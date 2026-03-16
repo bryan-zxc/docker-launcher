@@ -10,6 +10,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 DATA_FILE = Path.home() / ".docker-launcher" / "containers.json"
+SETTINGS_FILE = Path.home() / ".docker-launcher" / "settings.json"
 
 
 def _load() -> dict:
@@ -66,3 +67,50 @@ def cleanup_orphans(live_ids: set[str]) -> None:
     for k in orphans:
         del data[k]
     _save(data)
+
+
+# --- Settings ---
+
+
+def _load_settings() -> dict:
+    if not SETTINGS_FILE.exists():
+        return {}
+    try:
+        with open(SETTINGS_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        logger.warning("Corrupt settings.json — returning empty")
+        return {}
+
+
+def _save_settings(data: dict) -> None:
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=SETTINGS_FILE.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp_path, SETTINGS_FILE)
+    except BaseException:
+        os.unlink(tmp_path)
+        raise
+
+
+def get_settings() -> dict:
+    return _load_settings()
+
+
+def save_settings(settings: dict) -> dict:
+    current = _load_settings()
+    current.update(settings)
+    _save_settings(current)
+    return current
+
+
+def get_git_identity() -> tuple[str, str] | None:
+    """Return (name, email) if configured, else None."""
+    s = _load_settings()
+    name = s.get("git_name", "").strip()
+    email = s.get("git_email", "").strip()
+    if name and email:
+        return (name, email)
+    return None

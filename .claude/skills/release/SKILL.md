@@ -73,6 +73,13 @@ for skill in docx pdf pptx xlsx; do
 done
 ```
 
+Auto-format the refreshed templates so the commit only contains real changes:
+
+```bash
+uv run ruff check images/base/assets/templates/ --fix --quiet
+uv run ruff format images/base/assets/templates/ --quiet
+```
+
 Commit the refreshed templates if anything changed:
 
 ```bash

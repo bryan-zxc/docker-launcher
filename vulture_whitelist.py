@@ -5,6 +5,7 @@ api_list_images  # noqa
 api_get_image  # noqa
 api_build_image  # noqa
 api_list_containers  # noqa
+api_check_container_name  # noqa
 api_create_container  # noqa
 api_start_container  # noqa
 api_stop_container  # noqa
@@ -14,6 +15,8 @@ api_version  # noqa
 api_prerequisites  # noqa
 api_install_gh  # noqa
 api_gh_login  # noqa
+api_get_settings  # noqa
+api_save_settings  # noqa
 api_update_check  # noqa
 api_update_check_now  # noqa
 api_update_download  # noqa
