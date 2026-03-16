@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.0] - 2026-03-17
+
+### Added
+
+- Auto-create private GitHub repo when no URL provided — "New Project" mode (#3)
+- Redesigned container creation as a sub-page with two-card mode selection (New Project / Clone Existing Repo)
+- Git Identity added to Prerequisites page with inline name/email form
+- All prerequisites (gh CLI, gh auth, git identity) gate container creation
+- Initial commit and push of project templates for auto-created repos
+- Manual "Check for Updates" button in Settings page
+- .gitignore with .venv, egg-info, __pycache__, .DS_Store in project template
+
+### Fixed
+
+- VS Code launch on Windows restored (shell=True for code.cmd)
+- Auto-rebuild stale Docker images before container creation
+- Git identity required before container creation (persisted in ~/.docker-launcher/settings.json)
+
+### Changed
+
+- Container name is now always required (no more random UUIDs)
+- Git identity moved from Settings to Prerequisites page
+
 ## [0.2.0] - 2026-03-16
 
 ### Added
