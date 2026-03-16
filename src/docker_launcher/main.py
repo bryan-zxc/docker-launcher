@@ -27,6 +27,7 @@ from docker_launcher.docker_service import (
     get_image,
     build_image,
     list_containers,
+    container_name_available,
     create_container,
     start_container,
     stop_container,
@@ -118,6 +119,11 @@ class CreateContainerRequest(BaseModel):
 @app.get("/api/containers")
 async def api_list_containers():
     return list_containers()
+
+
+@app.get("/api/containers/check-name/{name}")
+async def api_check_container_name(name: str):
+    return {"available": container_name_available(name)}
 
 
 @app.post("/api/containers")

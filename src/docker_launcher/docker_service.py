@@ -152,6 +152,18 @@ def _image_built_at(name: str) -> str | None:
         return None
 
 
+def container_name_available(name: str) -> bool:
+    """Check if a container name is available (not already in use)."""
+    container_name = f"docker-launcher-{name}"
+    try:
+        _get_client().containers.get(container_name)
+        return False
+    except docker.errors.NotFound:
+        return True
+    except docker.errors.APIError:
+        return True
+
+
 def _image_is_built(name: str) -> bool:
     """Check if a Docker image tag exists locally."""
     tag = f"{IMAGE_PREFIX}/{name}:latest"
@@ -387,6 +399,9 @@ def create_container(
     if not _image_is_built(image_name):
         raise ValueError(f"Image '{image_name}' is not built. Build it first.")
 
+    # Derive name from repo URL if not provided (clone mode)
+    if not name and repo_url:
+        name = repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
     if not name:
         raise ValueError("Project name is required.")
 
@@ -461,17 +476,25 @@ def create_container(
         f"{CONTAINER_LABEL}.workspace": workspace_dir,
     }
 
-    container = _get_client().containers.create(
-        image=tag,
-        name=container_name,
-        command="sleep infinity",
-        user="node",
-        working_dir="/workspaces",
-        environment=env,
-        mounts=mounts,
-        labels=labels,
-        detach=True,
-    )
+    try:
+        container = _get_client().containers.create(
+            image=tag,
+            name=container_name,
+            command="sleep infinity",
+            user="node",
+            working_dir="/workspaces",
+            environment=env,
+            mounts=mounts,
+            labels=labels,
+            detach=True,
+        )
+    except docker.errors.APIError as e:
+        if e.status_code == 409:
+            raise ValueError(
+                f"A container named '{container_name}' already exists."
+                " Delete it first or use a different name."
+            ) from e
+        raise
 
     container.start()
 

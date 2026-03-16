@@ -1020,6 +1020,17 @@ body {
   margin-bottom: 10px;
 }
 
+.name-status {
+  font-size: 0.78rem;
+  margin-top: 4px;
+  display: block;
+  min-height: 1.2em;
+}
+
+.name-status.available { color: var(--green); }
+.name-status.taken { color: var(--red); }
+.name-status.checking { color: var(--text-dim); }
+
 .create-bottom {
   max-width: 680px;
 }
@@ -1429,6 +1440,7 @@ html.light .confirm-dialog {
           <div class="form-group">
             <label>Project Name</label>
             <input type="text" id="newProjectName" placeholder="my-project">
+            <span class="name-status" id="newProjectNameStatus"></span>
           </div>
         </div>
 
@@ -1445,6 +1457,7 @@ html.light .confirm-dialog {
           <div class="form-group" id="cloneNameGroup" style="display:none;">
             <label>Container Name (optional)</label>
             <input type="text" id="cloneName" placeholder="my-project">
+            <span class="name-status" id="cloneNameStatus"></span>
           </div>
         </div>
       </div>
@@ -2451,6 +2464,55 @@ html.light .confirm-dialog {
   var $cloneRepoGroup   = document.getElementById('cloneRepoGroup');
   var $cloneNameGroup   = document.getElementById('cloneNameGroup');
   var $createContainerBtn = document.getElementById('createContainerBtn');
+  var $newProjectNameStatus = document.getElementById('newProjectNameStatus');
+  var $cloneNameStatus = document.getElementById('cloneNameStatus');
+  var nameCheckTimer = null;
+  var nameAvailable = true;
+
+  function checkNameAvailability(name, statusEl) {
+    statusEl.textContent = '';
+    statusEl.className = 'name-status';
+    nameAvailable = true;
+    if (!name) return;
+
+    // Sanitise same way as backend
+    var sanitised = name.replace(/[^a-zA-Z0-9._-]/g, '');
+    if (!sanitised) return;
+
+    statusEl.textContent = 'Checking...';
+    statusEl.className = 'name-status checking';
+
+    api('GET', '/api/containers/check-name/' + encodeURIComponent(sanitised)).then(function(data) {
+      if (data.available) {
+        statusEl.textContent = 'Name available';
+        statusEl.className = 'name-status available';
+        nameAvailable = true;
+      } else {
+        statusEl.textContent = 'Name already taken';
+        statusEl.className = 'name-status taken';
+        nameAvailable = false;
+      }
+    }).catch(function() {
+      statusEl.textContent = '';
+      statusEl.className = 'name-status';
+      nameAvailable = true;
+    });
+  }
+
+  function onNameInput(input, statusEl) {
+    clearTimeout(nameCheckTimer);
+    nameCheckTimer = setTimeout(function() {
+      checkNameAvailability(input.value.trim(), statusEl);
+    }, 400);
+  }
+
+  $newProjectName.addEventListener('input', function() {
+    onNameInput($newProjectName, $newProjectNameStatus);
+  });
+
+  $cloneName.addEventListener('input', function() {
+    onNameInput($cloneName, $cloneNameStatus);
+  });
 
   function setCreateMode(mode) {
     createMode = mode;
@@ -2487,6 +2549,11 @@ html.light .confirm-dialog {
   });
 
   $createContainerBtn.addEventListener('click', function() {
+    if (!nameAvailable) {
+      alert('Container name is already taken. Choose a different name.');
+      return;
+    }
+
     var imageName = $createImage.value;
     if (!imageName) {
       alert('Please select an image.');

@@ -5,6 +5,7 @@ api_list_images  # noqa
 api_get_image  # noqa
 api_build_image  # noqa
 api_list_containers  # noqa
+api_check_container_name  # noqa
 api_create_container  # noqa
 api_start_container  # noqa
 api_stop_container  # noqa
