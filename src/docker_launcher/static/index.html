@@ -950,28 +950,38 @@ body {
 .prereq-status.fail { color: var(--red); }
 
 /* ===== Settings page ===== */
-.settings-placeholder {
-  padding: 40px 24px;
-  text-align: center;
-  max-width: 480px;
+.settings-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  max-width: 520px;
 }
 
-.settings-placeholder .material-symbols-outlined {
-  font-size: 48px;
-  color: var(--text-dim);
-  margin-bottom: 16px;
-}
-
-.settings-placeholder h3 {
+.settings-card h4 {
   font-family: 'Outfit', sans-serif;
-  font-size: 1.1rem;
-  margin-bottom: 8px;
-  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
 }
 
-.settings-placeholder p {
+.settings-card p {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.settings-card .settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-card .settings-status {
+  font-size: 0.82rem;
   color: var(--text-dim);
-  font-size: 0.88rem;
 }
 
 /* ===== Build Log Drawer ===== */
@@ -1351,10 +1361,16 @@ html.light .confirm-dialog {
         <p>Configure Docker Launcher preferences.</p>
       </div>
 
-      <div class="card settings-placeholder">
-        <span class="material-symbols-outlined">tune</span>
-        <h3>Settings coming soon</h3>
-        <p>Configuration options for themes, default images, and advanced Docker settings will appear here.</p>
+      <div class="settings-card">
+        <h4>Updates</h4>
+        <p>Check for a newer version of Docker Launcher on GitHub Releases.</p>
+        <div class="settings-row">
+          <button class="btn btn-sm btn-ghost" id="checkUpdateBtn">
+            <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px;">refresh</span>
+            Check for Updates
+          </button>
+          <span class="settings-status" id="checkUpdateStatus"></span>
+        </div>
       </div>
     </div>
 
@@ -1736,6 +1752,29 @@ html.light .confirm-dialog {
   $updateCloseAppBtn.addEventListener('click', function() {
     api('POST', '/api/shutdown').catch(function() {});
     document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0B1120;color:#F1F5F9;font-family:Outfit,sans-serif;font-size:1.1rem;">Application closed. You may close this tab.</div>';
+  });
+
+  // Manual update check (Settings page)
+  var $checkUpdateBtn = document.getElementById('checkUpdateBtn');
+  var $checkUpdateStatus = document.getElementById('checkUpdateStatus');
+
+  $checkUpdateBtn.addEventListener('click', function() {
+    setButtonLoading($checkUpdateBtn, true);
+    $checkUpdateStatus.textContent = 'Checking...';
+    api('POST', '/api/update-check').then(function(data) {
+      state.updateInfo = data;
+      if (data.update_available) {
+        $checkUpdateStatus.textContent = 'v' + data.latest_version + ' available!';
+        state.updateBannerDismissed = false;
+        handleUpdateState(data);
+      } else {
+        $checkUpdateStatus.textContent = 'You are on the latest version.';
+      }
+    }).catch(function() {
+      $checkUpdateStatus.textContent = 'Check failed. Try again later.';
+    }).finally(function() {
+      setButtonLoading($checkUpdateBtn, false);
+    });
   });
 
   // =========================================================================

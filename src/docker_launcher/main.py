@@ -15,6 +15,7 @@ from docker_launcher.prerequisites import (
     gh_login,
 )
 from docker_launcher.update_service import (
+    check_for_update,
     download_update,
     get_update_state,
     start_background_checker,
@@ -201,6 +202,11 @@ async def api_gh_login():
 @app.get("/api/update-check")
 async def api_update_check():
     return get_update_state()
+
+
+@app.post("/api/update-check")
+async def api_update_check_now():
+    return check_for_update()
 
 
 @app.post("/api/update-download")
