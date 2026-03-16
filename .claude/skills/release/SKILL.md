@@ -36,7 +36,52 @@ Present a summary of the changes and recommend a version bump with rationale:
 
 Wait for user confirmation.
 
-### 3. Download latest Claude Code installer
+### 3. Refresh templates from .external/
+
+Update the baked-in skill templates with the latest from the external repos.
+
+First, check that the external repos exist:
+
+```bash
+ls .external/playwright-cli .external/skills
+```
+
+If either is missing, tell the user and stop:
+
+```
+Missing .external/ repos. Clone them first:
+  gh repo clone microsoft/playwright-cli .external/playwright-cli
+  gh repo clone anthropics/skills .external/skills
+```
+
+Pull latest changes:
+
+```bash
+git -C .external/playwright-cli pull
+git -C .external/skills pull
+```
+
+Copy refreshed skills into the template directory:
+
+```bash
+rm -rf images/base/assets/templates/.claude/skills/playwright-cli
+cp -r .external/playwright-cli/skills/playwright-cli/ images/base/assets/templates/.claude/skills/playwright-cli/
+
+for skill in docx pdf pptx xlsx; do
+  rm -rf images/base/assets/templates/.claude/skills/$skill
+  cp -r .external/skills/skills/$skill/ images/base/assets/templates/.claude/skills/$skill/
+done
+```
+
+Commit the refreshed templates if anything changed:
+
+```bash
+git add images/base/assets/templates/
+git diff --cached --quiet || git commit -m "chore: refresh skill templates from .external/"
+git push origin develop
+```
+
+### 4. Download latest Claude Code installer
 
 Download the latest installer so it gets committed and bundled into the `.exe`:
 
@@ -46,7 +91,7 @@ powershell.exe -ExecutionPolicy Bypass -File images/base/assets/fetch-claude-ins
 
 This must succeed — do not proceed if the download fails.
 
-### 4. Update version and changelog
+### 5. Update version and changelog
 
 Update the version in `pyproject.toml` -> `[project] version`.
 
@@ -88,21 +133,21 @@ EOF
 )"
 ```
 
-### 5. Create release folder
+### 6. Create release folder
 
 ```bash
 mkdir -p docs/releases/v<version>
 ```
 
-### 6. Run all checks
+### 7. Run all checks
 
 Collect results for the report as you go.
 
-#### 5a. Lint suite (sequential — must fix before proceeding)
+#### 7a. Lint suite (sequential — must fix before proceeding)
 
 Run `/lint-test` (Ruff, Pyright, Vulture). Fix all issues. Track auto-fixed count and manual fixes.
 
-#### 5b. Tests (sequential — must pass before proceeding)
+#### 7b. Tests (sequential — must pass before proceeding)
 
 ```bash
 uv run pytest
@@ -110,7 +155,7 @@ uv run pytest
 
 Fix any failures before proceeding.
 
-#### 5c-5f. Analysis (parallel agents)
+#### 7c-7f. Analysis (parallel agents)
 
 Once lint and tests pass, launch **all remaining checks in parallel**. Each analysis agent scores findings on a **confidence scale (0-100)** and only issues scoring **>= 80** make it into the report.
 
@@ -201,7 +246,7 @@ Do NOT suggest:
 - Refactoring that changes public APIs
 - Stylistic preferences already handled by Ruff
 
-### 7. Produce pr_review_result.md
+### 8. Produce pr_review_result.md
 
 This file reports **findings only** — never mention fixes here. Fixes go in `pr_review_response.md`.
 
@@ -281,7 +326,7 @@ Write to `docs/releases/v<version>/pr_review_result.md`:
 - **Status**: Ready for review / Needs fixes
 ```
 
-### 8. Fix all issues
+### 9. Fix all issues
 
 If the report found any Critical or High issues:
 1. Fix each one
@@ -289,7 +334,7 @@ If the report found any Critical or High issues:
 3. Re-run all checks
 4. Update the report
 
-### 9. Produce pr_review_response.md
+### 10. Produce pr_review_response.md
 
 Write to `docs/releases/v<version>/pr_review_response.md`:
 
@@ -315,7 +360,7 @@ Write to `docs/releases/v<version>/pr_review_response.md`:
 ## Status: Ready for review
 ```
 
-### 10. Commit review artifacts and push
+### 11. Commit review artifacts and push
 
 ```bash
 git add docs/releases/v<version>/
@@ -323,7 +368,7 @@ git commit -m "Add release review artifacts for v<version>"
 git push origin develop
 ```
 
-### 11. Hand off to reviewer
+### 12. Hand off to reviewer
 
 Tell the user: "PR is ready. Run `/release-review` to review."
 
@@ -333,7 +378,7 @@ Tell the user: "PR is ready. Run `/release-review` to review."
 
 After the reviewer merges the PR, this skill continues:
 
-### 12. Verify changelog and tag
+### 13. Verify changelog and tag
 
 Check out `main` and verify the changelog reflects everything in the release (including any fixes made during the review process):
 
@@ -356,7 +401,7 @@ git tag v<version>
 git push origin v<version>
 ```
 
-### 13. Monitor CI/CD
+### 14. Monitor CI/CD
 
 Watch the GitHub Actions release workflow triggered by the tag:
 
@@ -389,7 +434,7 @@ If the workflow fails:
    ```
 8. Monitor the new CI run — repeat if it fails again
 
-### 14. Update GitHub Release notes
+### 15. Update GitHub Release notes
 
 The CI workflow creates the GitHub Release and uploads the `.exe` zip automatically on tag push. Update the release with notes from the changelog:
 
@@ -405,7 +450,7 @@ EOF
 )"
 ```
 
-### 15. Post-release report
+### 16. Post-release report
 
 Stay on `main`. Create an HTML slide deck saved to `docs/releases/v<version>/release-report.html`.
 
@@ -433,11 +478,11 @@ Stay on `main`. Create an HTML slide deck saved to `docs/releases/v<version>/rel
 - `.exe` users: GitHub Releases download link
 - Clone users: `git pull && uv run docker-launcher`
 
-### 15b. Update README with download link
+### 16b. Update README with download link
 
 After the release is published, update `README.md` with the download link from the GitHub Release page. Replace any existing download link or placeholder with the new one. Also update the `{{DOWNLOAD_LINK}}` placeholder in the release report HTML if present.
 
-### 15c. Commit release report and README to main
+### 16c. Commit release report and README to main
 
 Commit the report to `main` after the release workflow succeeds and the download link has been updated. This must be post-release because the report includes CI/CD results, the final release status, and the download link, which aren't known until the workflow completes.
 
@@ -449,7 +494,7 @@ git push origin main
 
 This commit is untagged so it does not trigger the release workflow.
 
-### 16. Merge back to develop
+### 17. Merge back to develop
 
 ```bash
 git checkout develop && git merge main

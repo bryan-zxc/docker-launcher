@@ -46,7 +46,9 @@ def build(slides_path: str, template_path: str, output_path: str) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Build standalone HTML presentation")
     parser.add_argument("slides", help="Path to slides.json")
-    parser.add_argument("-o", "--output", default="presentation.html", help="Output HTML path")
+    parser.add_argument(
+        "-o", "--output", default="presentation.html", help="Output HTML path"
+    )
     parser.add_argument("-t", "--template", default=None, help="Template HTML path")
     args = parser.parse_args()
 

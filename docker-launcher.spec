@@ -17,6 +17,8 @@ a = Analysis(
         "docker_launcher.main",
         "docker_launcher.docker_service",
         "docker_launcher.database",
+        "docker_launcher.update_service",
+        "docker_launcher._auth_defaults",
         "uvicorn.logging",
         "uvicorn.loops",
         "uvicorn.loops.auto",

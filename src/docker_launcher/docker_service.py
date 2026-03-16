@@ -32,7 +32,6 @@ IMAGES_DIR = _BASE_DIR / "images"
 logger = logging.getLogger(__name__)
 
 
-
 def _get_gh_token() -> str | None:
     """Extract the GitHub token from the host's gh CLI."""
     try:
@@ -46,6 +45,33 @@ def _get_gh_token() -> str | None:
             return result.stdout.strip()
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
+    return None
+
+
+def _get_claude_oauth_token() -> str | None:
+    """Resolve the Claude Code OAuth token.
+
+    Priority:
+      1. Host env var CLAUDE_CODE_OAUTH_TOKEN (power-user override)
+      2. Build-time default baked into the exe by CI
+      3. None (container will require interactive login)
+    """
+    import os
+
+    token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+    if token:
+        return token
+
+    try:
+        from docker_launcher._auth_defaults import (
+            CLAUDE_CODE_OAUTH_TOKEN,
+        )
+
+        if CLAUDE_CODE_OAUTH_TOKEN:
+            return CLAUDE_CODE_OAUTH_TOKEN
+    except ImportError:
+        pass
+
     return None
 
 
@@ -340,6 +366,10 @@ def create_container(
 
     if repo_url:
         repo_name = repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+        # Sanitise repo_name: keep only alphanumeric, hyphen, underscore, dot
+        repo_name = "".join(c for c in repo_name if c.isalnum() or c in "-_.")
+        if not repo_name:
+            repo_name = "repo"
         workspace_dir = f"/workspaces/{repo_name}"
     else:
         workspace_dir = "/workspaces"
@@ -361,6 +391,12 @@ def create_container(
     # rather than bind-mounting the host config, which is read-only
     # and doesn't contain tokens on Windows (stored in Credential Manager).
 
+    env = dict(CONTAINER_ENV)
+    claude_token = _get_claude_oauth_token()
+    if claude_token:
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = claude_token
+        logger.info("Claude Code OAuth token will be injected into container %s", name)
+
     labels = {
         CONTAINER_LABEL: "true",
         f"{CONTAINER_LABEL}.image": image_name,
@@ -375,7 +411,7 @@ def create_container(
         command="sleep infinity",
         user="node",
         working_dir="/workspaces",
-        environment=CONTAINER_ENV,
+        environment=env,
         mounts=mounts,
         labels=labels,
         detach=True,
@@ -411,6 +447,12 @@ def create_container(
 
     warnings: list[str] = []
 
+    if not claude_token:
+        warnings.append(
+            "No Claude Code OAuth token available — interactive login will be required."
+        )
+
+    clone_succeeded = False
     if repo_url:
         exit_code, output = container.exec_run(
             ["git", "clone", repo_url, workspace_dir],
@@ -422,6 +464,40 @@ def create_container(
             )
             logger.error("git clone failed (exit %d): %s", exit_code, msg)
             warnings.append(f"Git clone failed: {msg.strip()}")
+        else:
+            clone_succeeded = True
+
+    # Seed project templates into workspace (skills, CLAUDE.md, pyproject.toml)
+    if repo_url and clone_succeeded:
+        safe_dir = shlex.quote(workspace_dir)
+        seed_exit, seed_out = container.exec_run(
+            [
+                "bash",
+                "-c",
+                f"cp -rn /opt/templates/. {safe_dir}/ 2>&1",
+            ],
+            user="node",
+        )
+        if seed_exit != 0:
+            msg = (
+                seed_out.decode("utf-8", errors="replace")
+                if seed_out
+                else "unknown error"
+            )
+            logger.warning("Template seeding failed (exit %d): %s", seed_exit, msg)
+            warnings.append(f"Template seeding failed: {msg.strip()}")
+
+        # Install Python dependencies with uv
+        uv_exit, uv_out = container.exec_run(
+            ["bash", "-c", f"cd {safe_dir} && uv sync 2>&1"],
+            user="node",
+        )
+        if uv_exit != 0:
+            msg = (
+                uv_out.decode("utf-8", errors="replace") if uv_out else "unknown error"
+            )
+            logger.warning("uv sync failed (exit %d): %s", uv_exit, msg)
+            warnings.append(f"Python dependency install failed: {msg.strip()}")
 
     container.exec_run(
         ["/usr/local/bin/devcontainer-start.sh"],
@@ -513,8 +589,7 @@ def open_in_vscode(container_id: str) -> dict:
     update_last_opened(cid)
 
     subprocess.Popen(
-        f'code --new-window --folder-uri "{uri}"',
-        shell=True,
+        ["code", "--new-window", "--folder-uri", uri],
     )
 
     return {"status": "opened"}

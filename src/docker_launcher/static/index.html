@@ -258,6 +258,229 @@ body {
 .docker-banner .dismiss-btn:hover { background: rgba(251, 191, 36, 0.15); }
 .docker-banner .dismiss-btn .material-symbols-outlined { font-size: 18px; }
 
+/* ===== Update Banner ===== */
+.update-banner {
+  background: rgba(0, 170, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 170, 255, 0.15);
+  padding: 10px 24px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--blue);
+  transition: all 0.3s ease;
+}
+
+.update-banner.visible { display: flex; }
+.update-banner .material-symbols-outlined { font-size: 20px; }
+.update-banner .update-text { flex: 1; }
+.update-banner .update-text strong { font-weight: 600; }
+
+.update-banner .btn-download {
+  background: var(--blue);
+  color: var(--navy);
+  border: none;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.update-banner .btn-download:hover { opacity: 0.85; }
+.update-banner .btn-download .material-symbols-outlined { font-size: 16px; }
+
+.update-banner .dismiss-btn {
+  background: none;
+  border: none;
+  color: var(--blue);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.update-banner .dismiss-btn:hover { background: rgba(0, 170, 255, 0.12); }
+.update-banner .dismiss-btn .material-symbols-outlined { font-size: 18px; }
+
+.update-progress {
+  height: 3px;
+  background: rgba(0, 170, 255, 0.15);
+  overflow: hidden;
+  display: none;
+}
+
+.update-progress.visible { display: block; }
+
+.update-progress .bar {
+  height: 100%;
+  width: 30%;
+  background: var(--blue);
+  animation: indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(430%); }
+}
+
+/* ===== Update Overlay ===== */
+.update-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(11, 17, 32, 0.97);
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.update-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.update-card {
+  background: var(--slate);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 40px 48px;
+  max-width: 520px;
+  width: 90%;
+  text-align: center;
+  position: relative;
+}
+
+.update-card .update-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(0, 170, 255, 0.1);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.update-card .update-icon .material-symbols-outlined {
+  font-size: 28px;
+  color: var(--blue);
+}
+
+.update-card h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.update-card .version-info {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.update-card .download-path {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 16px 0 24px;
+  word-break: break-all;
+  text-align: left;
+}
+
+.update-card .update-steps {
+  text-align: left;
+  margin: 0 0 24px;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.update-card .update-steps li {
+  counter-increment: step;
+  padding: 5px 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.update-card .update-steps li::before {
+  content: counter(step);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 170, 255, 0.1);
+  color: var(--blue);
+  font-size: 0.72rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.update-card .btn-close-app {
+  background: var(--red);
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+}
+
+.update-card .btn-close-app:hover { opacity: 0.85; }
+.update-card .btn-close-app .material-symbols-outlined { font-size: 18px; }
+
+.update-card .card-dismiss {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.update-card .card-dismiss:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.update-card .card-dismiss .material-symbols-outlined { font-size: 20px; }
+
 /* ===== Page containers ===== */
 .page {
   display: none;
@@ -1044,6 +1267,28 @@ html.light .confirm-dialog {
       </button>
     </div>
 
+    <!-- Update available banner -->
+    <div class="update-banner" id="updateBanner">
+      <span class="material-symbols-outlined">upgrade</span>
+      <span class="update-text" id="updateBannerText"><strong>v0.2.0</strong> is available</span>
+      <button class="btn-download" id="updateDownloadBtn">
+        <span class="material-symbols-outlined">download</span>
+        Download New Version
+      </button>
+      <button class="dismiss-btn" id="dismissUpdateBtn" title="Dismiss">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Update downloading banner -->
+    <div class="update-banner" id="updateDownloadingBanner">
+      <span class="material-symbols-outlined">downloading</span>
+      <span class="update-text" id="updateDownloadingText">Downloading...</span>
+    </div>
+    <div class="update-progress" id="updateProgress">
+      <div class="bar"></div>
+    </div>
+
     <!-- ===== Containers Page ===== -->
     <div class="page active" id="page-containers">
       <div class="page-header">
@@ -1145,6 +1390,44 @@ html.light .confirm-dialog {
   </div>
 </div>
 
+<!-- ===== Update Ready Overlay ===== -->
+<div class="update-overlay" id="updateOverlay">
+  <div class="update-card">
+    <button class="card-dismiss" id="updateOverlayDismiss" title="Dismiss">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <div class="update-icon">
+      <span class="material-symbols-outlined">upgrade</span>
+    </div>
+    <h3>New Version Available</h3>
+    <p class="version-info" id="updateVersionInfo">Docker Launcher v0.2.0 has been downloaded. You are running v0.1.4.</p>
+    <p class="version-info">The new version has been saved to:</p>
+    <div class="download-path" id="updateDownloadPath"></div>
+    <ol class="update-steps">
+      <li>Click <strong>Close Application</strong> below to shut down Docker Launcher</li>
+      <li>Delete the current <strong>docker-launcher</strong> folder</li>
+      <li>Extract the downloaded zip file</li>
+      <li>Double-click <strong>docker-launcher.exe</strong> to start the new version</li>
+    </ol>
+    <button class="btn-close-app" id="updateCloseAppBtn">
+      <span class="material-symbols-outlined">power_settings_new</span>
+      Close Application
+    </button>
+  </div>
+</div>
+
+<!-- ===== Dismiss Update Warning ===== -->
+<div class="confirm-overlay" id="updateDismissConfirm">
+  <div class="confirm-dialog">
+    <h3>Continue with outdated version?</h3>
+    <p>Running an outdated version may cause unexpected behaviour. A newer version has already been downloaded and is ready to use.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-sm btn-ghost" id="updateDismissCancel">Cancel</button>
+      <button class="btn btn-sm btn-primary" id="updateDismissContinue" style="background: var(--yellow); color: var(--navy); box-shadow: 0 2px 12px rgba(251, 191, 36, 0.25);">Continue Anyway</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   'use strict';
@@ -1194,7 +1477,10 @@ html.light .confirm-dialog {
     dockerDown: false,
     activePage: 'containers',
     polling: null,
-    activeSSE: null
+    activeSSE: null,
+    updateInfo: null,
+    updateBannerDismissed: false,
+    updateOverlayDismissed: false
   };
 
   // =========================================================================
@@ -1204,6 +1490,21 @@ html.light .confirm-dialog {
   var $dockerBanner     = document.getElementById('dockerBanner');
   var $dockerBannerText = document.getElementById('dockerBannerText');
   var $dismissBannerBtn = document.getElementById('dismissBannerBtn');
+  var $updateBanner     = document.getElementById('updateBanner');
+  var $updateBannerText = document.getElementById('updateBannerText');
+  var $updateDownloadBtn = document.getElementById('updateDownloadBtn');
+  var $dismissUpdateBtn = document.getElementById('dismissUpdateBtn');
+  var $updateDownloadingBanner = document.getElementById('updateDownloadingBanner');
+  var $updateDownloadingText = document.getElementById('updateDownloadingText');
+  var $updateProgress   = document.getElementById('updateProgress');
+  var $updateOverlay    = document.getElementById('updateOverlay');
+  var $updateOverlayDismiss = document.getElementById('updateOverlayDismiss');
+  var $updateVersionInfo = document.getElementById('updateVersionInfo');
+  var $updateDownloadPath = document.getElementById('updateDownloadPath');
+  var $updateCloseAppBtn = document.getElementById('updateCloseAppBtn');
+  var $updateDismissConfirm = document.getElementById('updateDismissConfirm');
+  var $updateDismissCancel = document.getElementById('updateDismissCancel');
+  var $updateDismissContinue = document.getElementById('updateDismissContinue');
   var $containerList    = document.getElementById('containerList');
   var $imageList        = document.getElementById('imageList');
   var $prereqList       = document.getElementById('prereqList');
@@ -1339,6 +1640,102 @@ html.light .confirm-dialog {
 
   $dismissBannerBtn.addEventListener('click', function() {
     $dockerBanner.classList.remove('visible');
+  });
+
+  // =========================================================================
+  // Update check
+  // =========================================================================
+
+  function fetchUpdateCheck() {
+    return api('GET', '/api/update-check').then(function(data) {
+      state.updateInfo = data;
+      handleUpdateState(data);
+    }).catch(function() {});
+  }
+
+  function handleUpdateState(info) {
+    if (!info) return;
+    if (info.download_ready && !state.updateOverlayDismissed) {
+      showUpdateOverlay(info);
+      return;
+    }
+    if (info.update_available && !state.updateBannerDismissed) {
+      showUpdateBanner(info);
+    }
+  }
+
+  function showUpdateBanner(info) {
+    $updateBannerText.innerHTML = '<strong>v' + esc(info.latest_version) + '</strong> is available';
+    $updateBanner.classList.add('visible');
+    $updateDownloadingBanner.classList.remove('visible');
+    $updateProgress.classList.remove('visible');
+  }
+
+  function hideUpdateBanner() {
+    $updateBanner.classList.remove('visible');
+    $updateDownloadingBanner.classList.remove('visible');
+    $updateProgress.classList.remove('visible');
+  }
+
+  function showUpdateDownloading(info) {
+    $updateBanner.classList.remove('visible');
+    $updateDownloadingText.textContent = 'Downloading v' + (info.latest_version || '') + '...';
+    $updateDownloadingBanner.classList.add('visible');
+    $updateProgress.classList.add('visible');
+  }
+
+  function showUpdateOverlay(info) {
+    if (state.updateOverlayDismissed) return;
+    var current = info.current_version || state.version || '?';
+    var newer = info.downloaded_version || info.latest_version || '?';
+    $updateVersionInfo.textContent = 'Docker Launcher v' + newer + ' has been downloaded. You are running v' + current + '.';
+    $updateDownloadPath.textContent = info.download_path || '';
+    $updateOverlay.classList.add('open');
+  }
+
+  $updateDownloadBtn.addEventListener('click', function() {
+    if (state.activeSSE) return;
+    var info = state.updateInfo;
+    if (!info) return;
+    showUpdateDownloading(info);
+
+    streamSSE('POST', '/api/update-download', function(line) {
+      if (line.indexOf('DONE:') === 0) {
+        hideUpdateBanner();
+      } else if (line.indexOf('ERROR:') === 0) {
+        hideUpdateBanner();
+        showUpdateBanner(info);
+      }
+    }, function(success) {
+      hideUpdateBanner();
+      if (success) {
+        fetchUpdateCheck();
+      }
+    });
+  });
+
+  $dismissUpdateBtn.addEventListener('click', function() {
+    state.updateBannerDismissed = true;
+    hideUpdateBanner();
+  });
+
+  $updateOverlayDismiss.addEventListener('click', function() {
+    $updateDismissConfirm.classList.add('open');
+  });
+
+  $updateDismissCancel.addEventListener('click', function() {
+    $updateDismissConfirm.classList.remove('open');
+  });
+
+  $updateDismissContinue.addEventListener('click', function() {
+    $updateDismissConfirm.classList.remove('open');
+    $updateOverlay.classList.remove('open');
+    state.updateOverlayDismissed = true;
+  });
+
+  $updateCloseAppBtn.addEventListener('click', function() {
+    api('POST', '/api/shutdown').catch(function() {});
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0B1120;color:#F1F5F9;font-family:Outfit,sans-serif;font-size:1.1rem;">Application closed. You may close this tab.</div>';
   });
 
   // =========================================================================
@@ -1938,6 +2335,7 @@ html.light .confirm-dialog {
     fetchContainers();
     fetchImages();
     fetchPrerequisites();
+    fetchUpdateCheck();
     startPolling();
   }
 

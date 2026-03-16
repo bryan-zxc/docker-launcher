@@ -1,3 +1,4 @@
+import time
 from contextlib import asynccontextmanager
 from importlib.metadata import version
 
@@ -12,6 +13,11 @@ from docker_launcher.prerequisites import (
     get_prerequisites,
     install_gh,
     gh_login,
+)
+from docker_launcher.update_service import (
+    download_update,
+    get_update_state,
+    start_background_checker,
 )
 from docker_launcher.docker_service import (
     DockerNotAvailableError,
@@ -31,6 +37,7 @@ from docker_launcher.docker_service import (
 async def lifespan(app: FastAPI):
     import webbrowser
 
+    start_background_checker()
     webbrowser.open("http://localhost:3000")
     yield
 
@@ -186,6 +193,40 @@ async def api_gh_login():
             yield f"data: ERROR: {e}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream; charset=utf-8")
+
+
+# --- Updates ---
+
+
+@app.get("/api/update-check")
+async def api_update_check():
+    return get_update_state()
+
+
+@app.post("/api/update-download")
+async def api_update_download():
+    def stream():
+        try:
+            for line in download_update():
+                yield f"data: {line}\n\n"
+        except Exception as e:
+            yield f"data: ERROR: {e}\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream; charset=utf-8")
+
+
+@app.post("/api/shutdown")
+async def api_shutdown():
+    import os
+    import signal
+    import threading
+
+    def _delayed_shutdown():
+        time.sleep(0.5)
+        os.kill(os.getpid(), signal.SIGTERM)
+
+    threading.Thread(target=_delayed_shutdown, daemon=True).start()
+    return {"status": "shutting_down"}
 
 
 app.mount("/", StaticFiles(directory=Path(__file__).parent / "static", html=True))

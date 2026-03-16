@@ -108,3 +108,45 @@ class TestListImages:
         monkeypatch.setattr(mod, "IMAGES_DIR", images_dir)
 
         assert list_images() == []
+
+
+class TestGetClaudeOauthToken:
+    def test_env_var_takes_priority(self, monkeypatch):
+        """Host env var overrides bundled default."""
+        import docker_launcher._auth_defaults as defaults
+        import docker_launcher.docker_service as mod
+
+        monkeypatch.setattr(defaults, "CLAUDE_CODE_OAUTH_TOKEN", "bundled-token")
+        monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "env-token")
+
+        assert mod._get_claude_oauth_token() == "env-token"
+
+    def test_falls_back_to_bundled(self, monkeypatch):
+        """Uses bundled token when env var is not set."""
+        import docker_launcher._auth_defaults as defaults
+        import docker_launcher.docker_service as mod
+
+        monkeypatch.setattr(defaults, "CLAUDE_CODE_OAUTH_TOKEN", "bundled-token")
+        monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+
+        assert mod._get_claude_oauth_token() == "bundled-token"
+
+    def test_returns_none_when_nothing_available(self, monkeypatch):
+        """Returns None when neither env var nor bundled token exist."""
+        import docker_launcher._auth_defaults as defaults
+        import docker_launcher.docker_service as mod
+
+        monkeypatch.setattr(defaults, "CLAUDE_CODE_OAUTH_TOKEN", None)
+        monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+
+        assert mod._get_claude_oauth_token() is None
+
+    def test_empty_env_var_ignored(self, monkeypatch):
+        """Empty string env var falls through to bundled token."""
+        import docker_launcher._auth_defaults as defaults
+        import docker_launcher.docker_service as mod
+
+        monkeypatch.setattr(defaults, "CLAUDE_CODE_OAUTH_TOKEN", "bundled-token")
+        monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "")
+
+        assert mod._get_claude_oauth_token() == "bundled-token"
