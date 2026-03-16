@@ -1,0 +1,21 @@
+[project]
+name = "workspace"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "pypdf",
+    "pdfplumber",
+    "reportlab",
+    "pandas",
+    "openpyxl",
+    "markitdown[pptx]",
+    "Pillow",
+    "defusedxml",
+    "lxml",
+    "pytesseract",
+    "pdf2image",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"

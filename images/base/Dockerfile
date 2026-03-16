@@ -28,6 +28,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Symlink python -> python3
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
+# Install uv (Python package manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+  cp /root/.local/bin/uv /usr/local/bin/uv && \
+  cp /root/.local/bin/uvx /usr/local/bin/uvx
+
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
   chown -R node:node /usr/local/share
@@ -88,6 +93,9 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 # Install Playwright CLI globally
 RUN npm install -g @playwright/cli@latest
 
+# Install npm packages for document skills
+RUN npm install -g docx pptxgenjs
+
 # Install Chromium with OS-level dependencies
 USER root
 RUN cd /tmp && npx playwright-cli install --with-deps chromium
@@ -108,3 +116,6 @@ RUN chmod +x /usr/local/bin/claude-statusline.sh
 # Copy startup script
 COPY --chown=node:node assets/start.sh /usr/local/bin/devcontainer-start.sh
 RUN chmod +x /usr/local/bin/devcontainer-start.sh
+
+# Copy project templates (skills, CLAUDE.md, pyproject.toml)
+COPY --chown=node:node assets/templates/ /opt/templates/

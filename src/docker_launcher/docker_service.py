@@ -32,7 +32,6 @@ IMAGES_DIR = _BASE_DIR / "images"
 logger = logging.getLogger(__name__)
 
 
-
 def _get_gh_token() -> str | None:
     """Extract the GitHub token from the host's gh CLI."""
     try:
@@ -449,6 +448,7 @@ def create_container(
             "No Claude Code OAuth token available — interactive login will be required."
         )
 
+    clone_succeeded = False
     if repo_url:
         exit_code, output = container.exec_run(
             ["git", "clone", repo_url, workspace_dir],
@@ -460,6 +460,39 @@ def create_container(
             )
             logger.error("git clone failed (exit %d): %s", exit_code, msg)
             warnings.append(f"Git clone failed: {msg.strip()}")
+        else:
+            clone_succeeded = True
+
+    # Seed project templates into workspace (skills, CLAUDE.md, pyproject.toml)
+    if repo_url and clone_succeeded:
+        seed_exit, seed_out = container.exec_run(
+            [
+                "bash",
+                "-c",
+                f"cp -rn /opt/templates/. {workspace_dir}/ 2>/dev/null; true",
+            ],
+            user="node",
+        )
+        if seed_exit != 0:
+            msg = (
+                seed_out.decode("utf-8", errors="replace")
+                if seed_out
+                else "unknown error"
+            )
+            logger.warning("Template seeding failed (exit %d): %s", seed_exit, msg)
+            warnings.append(f"Template seeding failed: {msg.strip()}")
+
+        # Install Python dependencies with uv
+        uv_exit, uv_out = container.exec_run(
+            ["bash", "-c", f"cd {workspace_dir} && uv sync 2>&1"],
+            user="node",
+        )
+        if uv_exit != 0:
+            msg = (
+                uv_out.decode("utf-8", errors="replace") if uv_out else "unknown error"
+            )
+            logger.warning("uv sync failed (exit %d): %s", uv_exit, msg)
+            warnings.append(f"Python dependency install failed: {msg.strip()}")
 
     container.exec_run(
         ["/usr/local/bin/devcontainer-start.sh"],
