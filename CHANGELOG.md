@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0] - 2026-03-16
+
+### Added
+
+- Pre-install skills into containers on creation — playwright-cli, docx, pdf, pptx, xlsx, and sync skills seeded into every cloned repo workspace (#2)
+- Project template system — CLAUDE.md and pyproject.toml seeded into workspaces with uv sync creating a ready-to-use .venv
+- Auto-update notification — background check against GitHub Releases API on startup and daily (#6)
+- In-app download of new versions with indeterminate progress bar
+- Blocking overlay when running an outdated version with upgrade instructions and dismissible warning
+- Graceful shutdown endpoint (POST /api/shutdown) with Close Application button
+- uv, docx, and pptxgenjs installed in Docker image
+- Release skill step to refresh skill templates from .external/ repos
+
+### Fixed
+
+- Claude Code OAuth token now automatically injected into containers for seamless auth
+
 ## [0.1.4] - 2026-03-10
 
 ### Fixed

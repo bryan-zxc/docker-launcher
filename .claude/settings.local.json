@@ -32,7 +32,17 @@
       "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli open:*)",
       "Bash(playwright-cli snapshot:*)",
       "Bash(playwright-cli reload:*)",
-      "Bash(playwright-cli screenshot:*)"
+      "Bash(playwright-cli screenshot:*)",
+      "Bash(grep:*)",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli screenshot)",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli navigate http://localhost:8765/6-update-notification.html)",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli goto http://localhost:8765/6-update-notification.html)",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli click \"3. Downloaded\")",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli snapshot)",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli eval \"document.querySelectorAll\\('.scene-btn'\\)[2].click\\(\\)\")",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli eval \"document.querySelectorAll\\('.scene-btn'\\)[3].click\\(\\)\")",
+      "Bash(PLAYWRIGHT_MCP_SANDBOX=false playwright-cli close)",
+      "Bash(pkill:*)"
     ]
   }
 }
