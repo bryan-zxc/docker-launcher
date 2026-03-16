@@ -14,6 +14,8 @@ api_version  # noqa
 api_prerequisites  # noqa
 api_install_gh  # noqa
 api_gh_login  # noqa
+api_get_settings  # noqa
+api_save_settings  # noqa
 api_update_check  # noqa
 api_update_check_now  # noqa
 api_update_download  # noqa

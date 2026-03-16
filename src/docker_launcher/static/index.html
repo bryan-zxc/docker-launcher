@@ -984,6 +984,17 @@ body {
   color: var(--text-dim);
 }
 
+.settings-card .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.settings-card + .settings-card {
+  margin-top: 16px;
+}
+
 /* ===== Build Log Drawer ===== */
 .drawer-overlay {
   position: fixed;
@@ -1359,6 +1370,23 @@ html.light .confirm-dialog {
       <div class="page-header">
         <h2>Settings</h2>
         <p>Configure Docker Launcher preferences.</p>
+      </div>
+
+      <div class="settings-card">
+        <h4>Git Identity</h4>
+        <p>Name and email used for git commits inside containers. Required before creating containers.</p>
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="gitName" placeholder="Jane Smith">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="gitEmail" placeholder="jane@example.com">
+        </div>
+        <div class="settings-row">
+          <button class="btn btn-sm btn-primary" id="saveGitIdentityBtn">Save</button>
+          <span class="settings-status" id="gitIdentityStatus"></span>
+        </div>
       </div>
 
       <div class="settings-card">
@@ -1752,6 +1780,40 @@ html.light .confirm-dialog {
   $updateCloseAppBtn.addEventListener('click', function() {
     api('POST', '/api/shutdown').catch(function() {});
     document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0B1120;color:#F1F5F9;font-family:Outfit,sans-serif;font-size:1.1rem;">Application closed. You may close this tab.</div>';
+  });
+
+  // Manual update check (Settings page)
+  // Git identity (Settings page)
+  var $gitName = document.getElementById('gitName');
+  var $gitEmail = document.getElementById('gitEmail');
+  var $saveGitIdentityBtn = document.getElementById('saveGitIdentityBtn');
+  var $gitIdentityStatus = document.getElementById('gitIdentityStatus');
+
+  function fetchSettings() {
+    return api('GET', '/api/settings').then(function(data) {
+      if (data.git_name) $gitName.value = data.git_name;
+      if (data.git_email) $gitEmail.value = data.git_email;
+    }).catch(function() {});
+  }
+
+  $saveGitIdentityBtn.addEventListener('click', function() {
+    var name = $gitName.value.trim();
+    var email = $gitEmail.value.trim();
+    if (!name || !email) {
+      $gitIdentityStatus.textContent = 'Both fields are required.';
+      $gitIdentityStatus.style.color = 'var(--red)';
+      return;
+    }
+    setButtonLoading($saveGitIdentityBtn, true);
+    api('POST', '/api/settings', { git_name: name, git_email: email }).then(function() {
+      $gitIdentityStatus.textContent = 'Saved';
+      $gitIdentityStatus.style.color = 'var(--green)';
+    }).catch(function() {
+      $gitIdentityStatus.textContent = 'Failed to save.';
+      $gitIdentityStatus.style.color = 'var(--red)';
+    }).finally(function() {
+      setButtonLoading($saveGitIdentityBtn, false);
+    });
   });
 
   // Manual update check (Settings page)
@@ -2374,6 +2436,7 @@ html.light .confirm-dialog {
     fetchContainers();
     fetchImages();
     fetchPrerequisites();
+    fetchSettings();
     fetchUpdateCheck();
     startPolling();
   }

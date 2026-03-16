@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from pydantic import BaseModel
 
+from docker_launcher.database import get_settings, save_settings
 from docker_launcher.prerequisites import (
     get_prerequisites,
     install_gh,
@@ -194,6 +195,20 @@ async def api_gh_login():
             yield f"data: ERROR: {e}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream; charset=utf-8")
+
+
+# --- Settings ---
+
+
+@app.get("/api/settings")
+async def api_get_settings():
+    return get_settings()
+
+
+@app.post("/api/settings")
+async def api_save_settings(request: Request):
+    body = await request.json()
+    return save_settings(body)
 
 
 # --- Updates ---

@@ -19,6 +19,7 @@ import docker.types
 from docker_launcher.database import (
     cleanup_orphans,
     delete_metadata,
+    get_git_identity,
     get_metadata,
     update_last_opened,
 )
@@ -358,6 +359,12 @@ def create_container(
     """Create and start a new container from a built image."""
     tag = f"{IMAGE_PREFIX}/{image_name}:latest"
 
+    git_identity = get_git_identity()
+    if not git_identity:
+        raise ValueError(
+            "Git identity not configured. Go to Settings and set your name and email."
+        )
+
     if not _image_is_built(image_name):
         raise ValueError(f"Image '{image_name}' is not built. Build it first.")
 
@@ -444,6 +451,20 @@ def create_container(
                 cred_exit,
                 cred_out.decode("utf-8", errors="replace") if cred_out else "",
             )
+
+    # Inject git identity
+    git_name, git_email = git_identity
+    safe_name = shlex.quote(git_name)
+    safe_email = shlex.quote(git_email)
+    container.exec_run(
+        [
+            "bash",
+            "-c",
+            f"git config --global user.name {safe_name}"
+            f" && git config --global user.email {safe_email}",
+        ],
+        user="node",
+    )
 
     warnings: list[str] = []
 
