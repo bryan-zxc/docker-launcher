@@ -8,7 +8,9 @@ def tmp_docker_launcher(tmp_path, monkeypatch):
     launcher_dir.mkdir()
 
     import docker_launcher.database as db_mod
+    import docker_launcher.update_service as update_mod
 
     monkeypatch.setattr(db_mod, "DATA_FILE", launcher_dir / "containers.json")
+    monkeypatch.setattr(update_mod, "UPDATE_FILE", launcher_dir / "update.json")
 
     return launcher_dir

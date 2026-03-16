@@ -14,6 +14,9 @@ api_version  # noqa
 api_prerequisites  # noqa
 api_install_gh  # noqa
 api_gh_login  # noqa
+api_update_check  # noqa
+api_update_download  # noqa
+api_shutdown  # noqa
 docker_not_available_handler  # noqa
 main  # noqa
 
