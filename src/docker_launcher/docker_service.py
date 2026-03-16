@@ -588,8 +588,11 @@ def open_in_vscode(container_id: str) -> dict:
 
     update_last_opened(cid)
 
-    subprocess.Popen(
-        ["code", "--new-window", "--folder-uri", uri],
-    )
+    # Windows requires shell=True for code.cmd; URI is safe
+    # (hex-encoded container ID + sanitised repo name).
+    if sys.platform == "win32":
+        subprocess.Popen(f'code --new-window --folder-uri "{uri}"', shell=True)
+    else:
+        subprocess.Popen(["code", "--new-window", "--folder-uri", uri])
 
     return {"status": "opened"}
