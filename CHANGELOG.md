@@ -16,6 +16,9 @@
 ### Fixed
 
 - Claude Code OAuth token now automatically injected into containers for seamless auth
+- Sanitise repo name to prevent command injection via crafted repo URLs
+- Replace shell=True with list-form Popen in VS Code launch
+- Template seeding error handling no longer suppressed by `; true`
 
 ## [0.1.4] - 2026-03-10
 
