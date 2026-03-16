@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Release Report — Docker Launcher v0.2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #171719; --surface: #1f1f24; --elevated: #26262c;
+    --border: #2a2a2f; --border-subtle: #35353c;
+    --heading: #f0eff5; --subheading: #c8c8d0; --body: #8a8a95;
+    --muted: #6b6b78; --disabled: #44444f;
+    --accent: #7c8ae5; --accent-tint: rgba(124,138,229,0.1);
+    --accent-border: rgba(124,138,229,0.18);
+    --green: #5b9a7a; --green-tint: rgba(91,154,122,0.1);
+    --green-border: rgba(91,154,122,0.15);
+    --amber: #e0a05f; --amber-tint: rgba(224,160,95,0.12);
+    --rose: #d46b6b; --rose-tint: rgba(212,107,107,0.12);
+    --frame-bg: linear-gradient(160deg, #1a1a22 0%, #171719 100%);
+    --frame-border: #22223a;
+    --image-bg: linear-gradient(135deg, #1a1a24 0%, #14141a 100%);
+    --nav-bg: rgba(17,17,19,0.88);
+    --progress-track: #1f1f24;
+    --font-scale: 1;
+    --text-xs: calc(11px * var(--font-scale));
+    --text-sm: calc(13px * var(--font-scale));
+    --text-base: calc(15px * var(--font-scale));
+    --text-lg: calc(20px * var(--font-scale));
+    --text-xl: calc(28px * var(--font-scale));
+    --text-2xl: calc(42px * var(--font-scale));
+    --text-3xl: calc(54px * var(--font-scale));
+  }
+  html.light {
+    --bg: #faf9f7; --surface: #ffffff; --elevated: #f5f3ef;
+    --border: #e8e4dd; --border-subtle: #d9d4cc;
+    --heading: #1a1a1f; --subheading: #2a2a2f; --body: #6b6b78;
+    --muted: #8a8a95; --disabled: #b5b5be;
+    --accent: #5560c0; --accent-tint: rgba(85,96,192,0.07);
+    --accent-border: rgba(85,96,192,0.14);
+    --green: #3d8a5e; --green-tint: rgba(61,138,94,0.07);
+    --green-border: rgba(61,138,94,0.12);
+    --amber: #c49040; --amber-tint: rgba(196,144,64,0.08);
+    --rose: #c44e4e; --rose-tint: rgba(196,78,78,0.08);
+    --frame-bg: linear-gradient(160deg, #fff 0%, #f5f5fa 100%);
+    --frame-border: #dddcec;
+    --image-bg: linear-gradient(135deg, #f0eee8 0%, #e8e5de 100%);
+    --nav-bg: rgba(255,255,255,0.9);
+    --progress-track: #e8e4dd;
+  }
+
+  body {
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: #0e0e10; margin: 0; padding: 0;
+    overflow: hidden; height: 100vh; width: 100vw;
+    display: flex; align-items: center; justify-content: center;
+  }
+  html.light body { background: #e8e5e0; }
+
+  .viewport {
+    width: 1280px; height: 720px; position: absolute;
+    top: 50%; left: 50%; transform-origin: center center;
+    overflow: hidden; background: var(--bg); outline: none;
+  }
+
+  .progress-bar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; background: var(--progress-track); z-index: 200;
+  }
+  .progress-bar .fill {
+    height: 100%; background: var(--accent);
+    transition: width 0.25s ease;
+  }
+
+  .slide {
+    position: absolute; inset: 0; top: 3px;
+    display: none; flex-direction: column;
+    font-family: 'Outfit', sans-serif;
+    font-size: var(--text-base); color: var(--body);
+  }
+  .slide.active { display: flex; }
+
+  /* -- Title Slide -- */
+  .slide-title {
+    justify-content: center; align-items: center; text-align: center;
+    padding: 28px 64px;
+  }
+  .slide-title .inner-frame {
+    position: absolute; inset: 22px 38px; border-radius: 18px;
+    background: var(--frame-bg); border: 1px solid var(--frame-border);
+  }
+  .slide-title .accent-dot {
+    position: absolute; top: 36px; right: 64px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--accent); z-index: 2;
+  }
+  .slide-title h2 {
+    font-weight: 800; font-size: 72px;
+    color: var(--heading); line-height: 1.05; position: relative; z-index: 1;
+    margin-bottom: 12px;
+  }
+  .slide-title .subtitle {
+    font-weight: 400; font-size: 20px;
+    color: var(--muted); position: relative; z-index: 1;
+  }
+  .slide-title .pill {
+    display: inline-block; font-size: 14px;
+    font-weight: 500; color: var(--accent);
+    background: var(--accent-tint); border: 1px solid var(--accent-border);
+    padding: 3px 15px; border-radius: 100px;
+    margin-top: 14px; position: relative; z-index: 1;
+  }
+
+  /* -- Cards Grid -- */
+  .slide-cards {
+    justify-content: center; padding: 28px 50px; gap: 18px;
+  }
+  .slide-cards h3 {
+    font-weight: 700; font-size: 36px; color: var(--heading);
+  }
+  .slide-cards .grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+  }
+  .slide-cards .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px 26px; display: flex;
+    flex-direction: column; gap: 8px;
+  }
+  .slide-cards .card .icon {
+    width: 38px; height: 38px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 4px; flex-shrink: 0;
+  }
+  .slide-cards .card h4 {
+    font-size: 17px; font-weight: 600; color: var(--subheading);
+  }
+  .slide-cards .card p {
+    font-size: 13px; color: var(--muted); line-height: 1.55;
+  }
+
+  /* -- Dashboard -- */
+  .slide-dashboard {
+    justify-content: center; padding: 28px 50px; gap: 14px;
+  }
+  .slide-dashboard .dash-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .slide-dashboard .dash-header h3 {
+    font-weight: 700; font-size: 36px; color: var(--heading);
+  }
+  .slide-dashboard .dash-header .period {
+    font-size: 13px; font-weight: 500;
+    color: var(--green); background: var(--green-tint);
+    border: 1px solid var(--green-border);
+    padding: 3px 10px; border-radius: 100px;
+  }
+  .slide-dashboard .stat-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  }
+  .slide-dashboard .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 26px;
+    display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  }
+  .slide-dashboard .stat-card .sc-label {
+    font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+  }
+  .slide-dashboard .stat-card .sc-value {
+    font-weight: 800; font-size: 44px;
+    color: var(--heading); line-height: 1.1;
+  }
+  .slide-dashboard .detail-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  .slide-dashboard .detail-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 26px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .slide-dashboard .detail-card .dc-header {
+    display: flex; align-items: center; gap: 6px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .slide-dashboard .detail-card .dc-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .slide-dashboard .detail-card .dc-title {
+    font-size: 14px; font-weight: 600; color: var(--subheading);
+  }
+  .slide-dashboard .detail-card ul {
+    list-style: none; display: flex; flex-direction: column; gap: 6px;
+  }
+  .slide-dashboard .detail-card li {
+    font-size: 13px; color: var(--body); line-height: 1.45;
+    padding-left: 13px; position: relative;
+  }
+  .slide-dashboard .detail-card li::before {
+    content: ''; position: absolute; left: 0; top: 6px;
+    width: 4px; height: 4px; border-radius: 50%; background: var(--disabled);
+  }
+
+  /* -- Bullets -- */
+  .slide-bullets {
+    justify-content: center; padding: 36px 76px; gap: 22px;
+  }
+  .slide-bullets h3 {
+    font-weight: 700; font-size: 36px; color: var(--heading);
+  }
+  .slide-bullets ul {
+    list-style: none; display: flex; flex-direction: column; gap: 14px;
+  }
+  .slide-bullets li {
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: 18px; color: var(--body); line-height: 1.5;
+  }
+  .slide-bullets li .b {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0; margin-top: 7px;
+  }
+  .slide-bullets li strong { color: var(--subheading); font-weight: 600; }
+
+  /* -- Compare -- */
+  .slide-compare {
+    justify-content: center; padding: 28px 50px; gap: 18px;
+  }
+  .slide-compare h3 {
+    font-weight: 700; font-size: 36px; color: var(--heading);
+  }
+  .slide-compare .cols {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  .slide-compare .col {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px 32px; display: flex;
+    flex-direction: column; gap: 14px;
+  }
+  .slide-compare .col-header {
+    display: flex; align-items: center; gap: 8px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  .slide-compare .col-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .slide-compare .col-title {
+    font-size: 18px; font-weight: 600; color: var(--subheading);
+  }
+  .slide-compare .col ul {
+    list-style: none; display: flex; flex-direction: column; gap: 10px;
+  }
+  .slide-compare .col li {
+    font-size: 15px; color: var(--body); line-height: 1.5;
+    padding-left: 16px; position: relative;
+  }
+  .slide-compare .col li::before {
+    content: ''; position: absolute; left: 0; top: 6px;
+    width: 5px; height: 5px; border-radius: 50%;
+  }
+  .slide-compare .col-a li::before { background: var(--accent); }
+  .slide-compare .col-b li::before { background: var(--accent); }
+
+  /* -- Floating Nav Dock -- */
+  .nav-dock {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 6px;
+    background: var(--nav-bg); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px 8px; z-index: 300;
+    white-space: nowrap; user-select: none;
+    opacity: 0.5; transition: opacity 0.3s ease;
+  }
+  .nav-dock:hover { opacity: 1; }
+  .nav-dock .arr {
+    width: 30px; height: 30px; border-radius: 7px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--body); cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-family: 'Outfit', sans-serif; padding: 0;
+  }
+  .nav-dock .arr:hover { background: var(--surface); color: var(--heading); }
+  .nav-dock .sep { width: 1px; height: 20px; background: var(--border); }
+  .nav-dock .slide-title-area {
+    display: flex; align-items: center; gap: 5px; min-width: 140px;
+  }
+  .nav-dock .tnum { font-size: 11px; font-weight: 600; color: var(--accent); }
+  .nav-dock .ttext {
+    font-size: 11px; font-weight: 500; color: var(--subheading);
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nav-dock .page-count { font-size: 10px; font-weight: 500; color: var(--muted); }
+  .nav-dock .page-count .pc-current { color: var(--subheading); font-weight: 600; }
+  .nav-dock .pips { display: flex; gap: 5px; align-items: center; }
+  .nav-dock .pip {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--disabled); border: none; cursor: pointer;
+    transition: all 0.2s; padding: 0;
+  }
+  .nav-dock .pip.active { background: var(--accent); width: 18px; border-radius: 4px; }
+  .nav-dock .pip:hover:not(.active) { background: var(--body); }
+  .nav-dock .pip-divider {
+    width: 3px; height: 16px; border-radius: 2px;
+    background: var(--disabled); border: none; cursor: pointer;
+    transition: all 0.2s; padding: 0;
+  }
+  .nav-dock .pip-divider.active { background: var(--accent); }
+  .nav-dock .theme-toggle {
+    width: 30px; height: 30px; border-radius: 7px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; padding: 0;
+  }
+  .nav-dock .theme-toggle:hover { background: var(--surface); color: var(--heading); }
+
+  @page { size: 1280px 720px; margin: 0; }
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    html, html.light { color-scheme: light; }
+    body { background: white !important; padding: 0; margin: 0; display: block; overflow: visible !important; height: auto !important; width: auto !important; }
+    .viewport { width: auto !important; height: auto !important; position: static !important; transform: none !important; overflow: visible !important; background: white !important; }
+    .nav-dock, .progress-bar { display: none !important; height: 0 !important; overflow: hidden !important; }
+    .slide {
+      display: flex !important; position: relative !important;
+      width: 1280px; height: 720px;
+      page-break-after: always; break-after: page;
+      background: #faf9f7 !important;
+      --bg: #faf9f7; --surface: #ffffff; --elevated: #f5f3ef;
+      --border: #e8e4dd; --heading: #1a1a1f; --subheading: #2a2a2f; --body: #6b6b78;
+      --muted: #8a8a95; --disabled: #b5b5be;
+      --accent: #5560c0; --accent-tint: rgba(85,96,192,0.07);
+      --accent-border: rgba(85,96,192,0.14);
+      --green: #3d8a5e; --green-tint: rgba(61,138,94,0.07);
+      --green-border: rgba(61,138,94,0.12);
+      --frame-bg: linear-gradient(160deg, #fff 0%, #f5f5fa 100%);
+      --frame-border: #dddcec;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="viewport" tabindex="0" id="viewport">
+  <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+
+  <!-- Slide 1: Title -->
+  <div class="slide slide-title active" data-title="Release Overview">
+    <div class="inner-frame"></div>
+    <div class="accent-dot"></div>
+    <h2>v0.2.0</h2>
+    <div class="subtitle">Container template seeding, auto-update system, and security hardening</div>
+    <div class="pill">PR #7 &middot; 2026-03-16 &middot; shipped as v0.2.1</div>
+  </div>
+
+  <!-- Slide 2: What's New -->
+  <div class="slide slide-cards" data-title="What's New">
+    <h3>What's New</h3>
+    <div class="grid">
+      <div class="card">
+        <div class="icon" style="background: var(--accent-tint); color: var(--accent);">
+          <span class="material-symbols-outlined">inventory_2</span>
+        </div>
+        <h4>Container Template Seeding (#2)</h4>
+        <p>6 skills pre-installed into every container (playwright-cli, docx, pdf, pptx, xlsx, sync). CLAUDE.md and pyproject.toml seeded with uv sync creating a ready-to-use .venv.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background: var(--accent-tint); color: var(--accent);">
+          <span class="material-symbols-outlined">system_update</span>
+        </div>
+        <h4>Auto-Update System (#6)</h4>
+        <p>Background GitHub Releases check, in-app download with progress bar, blocking overlay for outdated versions, graceful shutdown via Close Application button.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background: var(--accent-tint); color: var(--accent);">
+          <span class="material-symbols-outlined">key</span>
+        </div>
+        <h4>OAuth Token Injection</h4>
+        <p>Claude Code OAuth token automatically injected into containers for seamless authentication without manual login.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="background: var(--accent-tint); color: var(--accent);">
+          <span class="material-symbols-outlined">shield</span>
+        </div>
+        <h4>Security Hardening</h4>
+        <p>Repo name sanitisation, shell=True removal in VS Code launch, shlex.quote for container commands, template seeding error handling restored.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 3: Quality Gate -->
+  <div class="slide slide-dashboard" data-title="Quality Gate">
+    <div class="dash-header">
+      <h3>Quality Gate Results</h3>
+      <span class="period">All passed</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <span class="sc-label">Tests</span>
+        <span class="sc-value">53</span>
+      </div>
+      <div class="stat-card">
+        <span class="sc-label">Ruff / Pyright</span>
+        <span class="sc-value" style="font-size: 36px;">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="sc-label">ADR Compliance</span>
+        <span class="sc-value" style="font-size: 36px;">4/4</span>
+      </div>
+      <div class="stat-card">
+        <span class="sc-label">Issues Found</span>
+        <span class="sc-value" style="font-size: 36px;">8</span>
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-card">
+        <div class="dc-header">
+          <div class="dc-dot" style="background: var(--accent);"></div>
+          <span class="dc-title">Resolved Before Merge</span>
+        </div>
+        <ul>
+          <li>1 Critical: command injection (shell=True)</li>
+          <li>2 High: container injection, dead error handling</li>
+        </ul>
+      </div>
+      <div class="detail-card">
+        <div class="dc-header">
+          <div class="dc-dot" style="background: var(--accent);"></div>
+          <span class="dc-title">Deferred (Low Risk)</span>
+        </div>
+        <ul>
+          <li>api_shutdown error handling</li>
+          <li>api_update_check try/except</li>
+          <li>devcontainer-start.sh fire-and-forget</li>
+          <li>Path traversal in get_image</li>
+        </ul>
+      </div>
+      <div class="detail-card">
+        <div class="dc-header">
+          <div class="dc-dot" style="background: var(--accent);"></div>
+          <span class="dc-title">CI/CD</span>
+        </div>
+        <ul>
+          <li>v0.2.0 tag failed (PowerShell parsing)</li>
+          <li>Hotfixed to v0.2.1 (bash shell)</li>
+          <li>v0.2.1 build + upload succeeded</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 4: Known Issues / What's Next -->
+  <div class="slide slide-compare" data-title="What's Next">
+    <h3>Known Issues &amp; What's Next</h3>
+    <div class="cols">
+      <div class="col col-a">
+        <div class="col-header">
+          <div class="col-dot" style="background: var(--accent);"></div>
+          <span class="col-title">Deferred Items</span>
+        </div>
+        <ul>
+          <li>api_shutdown: os.kill error handling in daemon thread (benign)</li>
+          <li>api_update_check: missing try/except wrapper (safe function)</li>
+          <li>devcontainer-start.sh: fire-and-forget exec_run (pre-existing, intentional)</li>
+          <li>get_image path traversal: FastAPI params can't contain /, .. fails safely</li>
+        </ul>
+      </div>
+      <div class="col col-b">
+        <div class="col-header">
+          <div class="col-dot" style="background: var(--accent);"></div>
+          <span class="col-title">Upcoming</span>
+        </div>
+        <ul>
+          <li>Ticket #2 (template seeding) and #6 (auto-update) delivered in this release</li>
+          <li>Backlog items to be prioritised</li>
+          <li>Consider publishing to PyPI for uv tool install workflow</li>
+          <li>Scoop/winget manifest for native Windows package management</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 5: How to Get It -->
+  <div class="slide slide-bullets" data-title="How to Get It">
+    <h3>How to Get It</h3>
+    <ul>
+      <li>
+        <div class="b"></div>
+        <span><strong>.exe users</strong> &mdash; download <code>docker-launcher.zip</code> from <a href="https://github.com/bryan-zxc/docker-launcher/releases/download/v0.2.1/docker-launcher.zip" style="color: var(--accent);">GitHub Releases</a>, extract, and run <code>docker-launcher.exe</code></span>
+      </li>
+      <li>
+        <div class="b"></div>
+        <span><strong>Clone users</strong> &mdash; <code style="color: var(--subheading);">git pull && uv run docker-launcher</code></span>
+      </li>
+      <li>
+        <div class="b"></div>
+        <span><strong>Requires</strong> &mdash; Docker Desktop running on the host machine</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Floating Nav Dock -->
+  <div class="nav-dock" id="navDock">
+    <button class="arr" onclick="goTo(0)" title="First slide">&#x226A;</button>
+    <button class="arr" onclick="goPrev()">&#8249;</button>
+    <div class="sep"></div>
+    <div class="slide-title-area">
+      <span class="tnum" id="navNum">01</span>
+      <span class="ttext" id="navTitle"></span>
+    </div>
+    <div class="sep"></div>
+    <div class="page-count">
+      <span class="pc-current" id="navCurrent">1</span> / <span id="navTotal">0</span>
+    </div>
+    <div class="sep"></div>
+    <div class="pips" id="navPips"></div>
+    <div class="sep"></div>
+    <button class="theme-toggle" id="btnTheme" onclick="toggleTheme()" title="Toggle light/dark mode">&#9788;</button>
+    <div class="sep"></div>
+    <button class="arr" onclick="goNext()">&#8250;</button>
+    <button class="arr" onclick="goTo(total-1)" title="Last slide">&#x226B;</button>
+  </div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  const pipsContainer = document.getElementById('navPips');
+  slides.forEach((s, i) => {
+    const pip = document.createElement('button');
+    const isSection = s.classList.contains('slide-section');
+    pip.className = (isSection ? 'pip-divider' : 'pip') + (i === 0 ? ' active' : '');
+    pip.onclick = () => goTo(i);
+    pipsContainer.appendChild(pip);
+  });
+  document.getElementById('navTotal').textContent = total;
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= total) return;
+    slides[current].classList.remove('active');
+    current = idx;
+    slides[current].classList.add('active');
+    updateNav();
+  }
+  function goNext() { goTo(current + 1); }
+  function goPrev() { goTo(current - 1); }
+
+  function updateNav() {
+    const slide = slides[current];
+    document.getElementById('navNum').textContent = String(current + 1).padStart(2, '0');
+    document.getElementById('navTitle').textContent = slide.dataset.title || '';
+    document.getElementById('navCurrent').textContent = current + 1;
+    document.getElementById('progressFill').style.width = ((current + 1) / total * 100) + '%';
+    document.querySelectorAll('#navPips .pip, #navPips .pip-divider').forEach((p, i) =>
+      p.classList.toggle('active', i === current));
+  }
+
+  let isDark = true;
+  function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.classList.toggle('light', !isDark);
+    document.getElementById('btnTheme').innerHTML = isDark ? '&#9788;' : '&#9790;';
+  }
+
+  document.getElementById('viewport').addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goNext(); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
+  });
+
+  document.getElementById('viewport').addEventListener('click', (e) => {
+    if (e.target.closest('.nav-dock')) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (e.clientX - rect.left > rect.width / 2) goNext(); else goPrev();
+  });
+
+  function scaleViewport() {
+    const vp = document.getElementById('viewport');
+    const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    vp.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+  window.addEventListener('resize', scaleViewport);
+  scaleViewport();
+
+  document.getElementById('viewport').focus();
+  updateNav();
+</script>
+
+</body>
+</html>

@@ -22,7 +22,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### From `.exe`
 
-1. Download [`docker-launcher.zip`](https://github.com/bryan-zxc/docker-launcher/releases/download/v0.1.1/docker-launcher.zip) from the latest [GitHub Release](https://github.com/bryan-zxc/docker-launcher/releases)
+1. Download [`docker-launcher.zip`](https://github.com/bryan-zxc/docker-launcher/releases/download/v0.2.1/docker-launcher.zip) from the latest [GitHub Release](https://github.com/bryan-zxc/docker-launcher/releases)
 2. Extract the zip
 3. Run `docker-launcher.exe`
 4. The browser opens automatically to [http://localhost:3000](http://localhost:3000)
